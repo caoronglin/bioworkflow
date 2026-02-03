@@ -1,0 +1,61 @@
+# BioWorkflow Conda 环境配置
+# 使用: conda env create -f environment.yml
+# 支持 Python 3.13/3.14 + Pandas 3.0
+name: bioworkflow
+channels:
+  - conda-forge
+  - bioconda
+  - defaults
+
+dependencies:
+  # Python 3.14 (或 3.13 作为备选)
+  - python>=3.13
+  
+  # 核心依赖 - 最新版本
+  - pip>=24.3
+  - numpy>=2.2
+  - pandas>=3.0
+  - scipy>=1.15
+  - polars>=1.20
+  - pyarrow>=18.0
+  
+  # Snakemake 工作流引擎
+  - snakemake>=9.0
+  
+  # 生物信息学工具（可选，取消注释启用）
+  # - bwa>=0.7.18
+  # - samtools>=1.21
+  # - bcftools>=1.21
+  # - bedtools>=2.31
+  # - bowtie2>=2.5
+  
+  # R 语言支持（可选，取消注释启用）
+  # - r-base>=4.4
+  # - r-tidyverse>=2.0
+  # - r-ggplot2>=3.5
+  # - r-biocmanager
+  
+  # pip 安装的包 (PyPI 最新版本)
+  - pip:
+    - fastapi>=0.115.0
+    - uvicorn[standard]>=0.34.0
+    - pydantic>=2.10.0
+    - pydantic-settings>=2.7.0
+    - sqlalchemy>=2.0.36
+    - alembic>=1.14.0
+    - celery>=5.4.0
+    - redis>=5.2.0
+    - python-jose[cryptography]>=3.3.0
+    - passlib[bcrypt]>=1.7.4
+    - python-multipart>=0.0.20
+    - elasticsearch>=8.17.0
+    - jieba>=0.42.1
+    - aiohttp>=3.11.0
+    - httpx>=0.28.0
+    - python-dotenv>=1.0.1
+    - click>=8.1.8
+    - rich>=13.9.0
+    - loguru>=0.7.3
+    - PyYAML>=6.0.2
+    - Jinja2>=3.1.5
+    - typing-extensions>=4.12.0

@@ -1,0 +1,5 @@
+commit_message_pattern = "^(feat|fix|docs|style|refactor|perf|test|chore)(\(.+\))?!?: .{1,50}"
+commit_message_pattern_error = "Must follow conventional commits format (feat/fix/docs/...)"
+
+ignore_merge_commits = false
+ignore_revert_commits = false
