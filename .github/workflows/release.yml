@@ -1,0 +1,45 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.13'
+
+    - name: Extract version
+      id: get_version
+      run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
+
+    - name: Create Release
+      uses: softprops/action-gh-release@v1
+      with:
+        name: BioWorkflow v${{ steps.get_version.outputs.VERSION }}
+        body: |
+          ## BioWorkflow v${{ steps.get_version.outputs.VERSION }}
+
+          ### 更新内容
+          - 查看 [CHANGELOG.md](./CHANGELOG.md) 了解详细更新
+
+          ### 安装
+          ```bash
+          pip install bioworkflow==${{ steps.get_version.outputs.VERSION }}
+          ```
+
+          ### 文档
+          - [快速开始](https://github.com/${{ github.repository }}/blob/main/QUICKSTART.md)
+          - [开发指南](https://github.com/${{ github.repository }}/blob/main/docs/DEVELOPMENT.md)
+        draft: false
+        prerelease: ${{ contains(steps.get_version.outputs.VERSION, 'alpha') || contains(steps.get_version.outputs.VERSION, 'beta') || contains(steps.get_version.outputs.VERSION, 'rc') }}
