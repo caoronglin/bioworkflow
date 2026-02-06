@@ -12,27 +12,27 @@
           class="el-menu-vertical-demo"
         >
           <el-menu-item index="/">
-            <i class="el-icon-home"></i>
+            <el-icon><HomeFilled /></el-icon>
             <span>Dashboard</span>
           </el-menu-item>
           <el-menu-item index="/pipelines">
-            <i class="el-icon-document-copy"></i>
+            <el-icon><SetUp /></el-icon>
             <span>流水线</span>
           </el-menu-item>
           <el-menu-item index="/conda">
-            <i class="el-icon-box"></i>
+            <el-icon><Box /></el-icon>
             <span>Conda 环境</span>
           </el-menu-item>
           <el-menu-item index="/knowledge">
-            <i class="el-icon-notebook-2"></i>
+            <el-icon><Notebook /></el-icon>
             <span>知识库</span>
           </el-menu-item>
           <el-menu-item index="/mcp">
-            <i class="el-icon-connection"></i>
+            <el-icon><Link /></el-icon>
             <span>MCP 服务</span>
           </el-menu-item>
           <el-menu-item index="/settings">
-            <i class="el-icon-setting"></i>
+            <el-icon><Setting /></el-icon>
             <span>设置</span>
           </el-menu-item>
         </el-menu>
@@ -81,7 +81,7 @@
 </template>
 
 <script setup lang="ts">
-import { ArrowRight } from '@element-plus/icons-vue'
+import { ArrowRight, HomeFilled, SetUp, Box, Notebook, Link, Setting } from '@element-plus/icons-vue'
 </script>
 
 <style scoped lang="scss">

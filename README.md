@@ -14,6 +14,18 @@
 - **模块化设计**：所有功能模块化，易于扩展和维护
 - **多语言插件系统**：支持 Python、R、Shell 等多种语言的插件
 
+## 📖 开发者文档
+
+- **[CLAUDE.md](./CLAUDE.md)** - Claude Code 开发指南（推荐先阅读）
+- **[QUICKSTART.md](./QUICKSTART.md)** - 快速开始指南
+- **[docs/DEVELOPMENT.md](./docs/DEVELOPMENT.md)** - 详细开发文档
+
+## 📖 开发者文档
+
+- **[CLAUDE.md](./CLAUDE.md)** - Claude Code 开发指南（推荐先阅读）
+- **[QUICKSTART.md](./QUICKSTART.md)** - 快速开始指南
+- **[docs/DEVELOPMENT.md](./docs/DEVELOPMENT.md)** - 详细开发文档
+
 ## 🏗️ 项目结构
 
 ```
