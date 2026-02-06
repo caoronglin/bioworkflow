@@ -1,0 +1,155 @@
+site_name: BioWorkflow 文档
+site_description: BioWorkflow - 生物信息学工作流管理平台文档
+site_author: BioWorkflow Team
+site_url: https://yourusername.github.io/bioworkflow/
+
+docs_dir: docs
+site_dir: site
+
+# 主题配置
+theme:
+  name: material
+  language: zh
+  palette:
+    # 浅色模式
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: blue
+      accent: blue
+      toggle:
+        icon: material/brightness-7
+        name: 切换到深色模式
+    # 深色模式
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: blue
+      accent: blue
+      toggle:
+        icon: material/brightness-4
+        name: 切换到浅色模式
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - navigation.expand
+    - navigation.top
+    - navigation.footer
+    - search.suggest
+    - search.highlight
+    - content.tabs.link
+    - content.code.annotate
+    - content.code.copy
+  icon:
+    admonition:
+      note: octicons/tag-16
+      abstract: octicons/checklist-16
+      info: octicons/info-16
+      tip: octicons/squirrel-16
+      success: octicons/check-16
+      question: octicons/question-16
+      warning: octicons/alert-16
+      failure: octicons/x-16
+      danger: octicons/zap-16
+      bug: octicons/bug-16
+      example: octicons/beaker-16
+      quote: octicons/quote-16
+
+# 插件配置
+plugins:
+  - search:
+      lang: zh
+  - minify:
+      minify_html: true
+
+# 额外配置
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/yourusername/bioworkflow
+      name: GitHub
+    - icon: fontawesome/brands/docker
+      link: https://hub.docker.com/r/yourusername/bioworkflow
+      name: Docker Hub
+  version:
+    provider: mike
+  analytics:
+    feedback:
+      title: 此页面有帮助吗？
+      ratings:
+        - icon: material/heart
+          name: 非常有用
+          data: 1
+          note: 感谢您的反馈！
+        - icon: material/heart-broken
+          name: 需要改进
+          data: 0
+          note: 感谢您的反馈！我们会持续改进。
+
+# 扩展
+markdown_extensions:
+  - abbr
+  - admonition
+  - attr_list
+  - def_list
+  - footnotes
+  - md_in_html
+  - toc:
+      permalink: true
+      title: 目录
+  - pymdownx.arithmatex:
+      generic: true
+  - pymdownx.betterem:
+      smart_enable: all
+  - pymdownx.caret
+  - pymdownx.details
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+  - pymdownx.inlinehilite
+  - pymdownx.keys
+  - pymdownx.magiclink:
+      repo_url_shorthand: true
+      user: yourusername
+      repo: bioworkflow
+  - pymdownx.mark
+  - pymdownx.smartsymbols
+  - pymdownx.snippets
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.tasklist:
+      custom_checkbox: true
+  - pymdownx.tilde
+
+# 导航配置
+nav:
+  - 首页: index.md
+  - 快速开始:
+    - 安装指南: guide/installation.md
+    - 快速入门: guide/quickstart.md
+    - 配置文件: guide/configuration.md
+  - 用户指南:
+    - 工作流管理: guide/workflows.md
+    - Conda 环境: guide/conda.md
+    - 知识库: guide/knowledge.md
+    - MCP 服务: guide/mcp.md
+  - 部署指南:
+    - Docker 部署: deployment/docker.md
+    - Kubernetes 部署: deployment/kubernetes.md
+    - 生产环境配置: deployment/production.md
+  - 开发文档:
+    - 架构设计: development/architecture.md
+    - API 文档: api/index.md
+    - 数据库模型: development/models.md
+    - 贡献指南: development/contributing.md
+  - 参考:
+    - 环境变量: reference/environment.md
+    - CLI 命令: reference/cli.md
+    - 常见问题: reference/faq.md
