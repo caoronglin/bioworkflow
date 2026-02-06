@@ -1,0 +1,107 @@
+version: '3.8'
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: production
+    image: ghcr.io/${GITHUB_REPOSITORY:-yourusername/bioworkflow}:${TAG:-latest}
+    container_name: bioworkflow
+    restart: unless-stopped
+    ports:
+      - "${PORT:-8000}:8000"
+    environment:
+      - DEBUG=${DEBUG:-false}
+      - DATABASE_URL=${DATABASE_URL:-sqlite:///app/data/bioworkflow.db}
+      - REDIS_URL=${REDIS_URL:-redis://redis:6379/0}
+      - SECRET_KEY=${SECRET_KEY}
+      - SNAKEMAKE_WORKDIR=/app/workflows
+      - SNAKEMAKE_CONDA_PREFIX=/app/conda_envs
+      - CONDA_CHANNELS=conda-forge,bioconda,defaults
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+    volumes:
+      - ./data:/app/data
+      - ./workflows:/app/workflows
+      - ./conda_envs:/app/conda_envs
+      - ./knowledge_base:/app/knowledge_base
+      - ./logs:/app/logs
+    depends_on:
+      - redis
+      - elasticsearch
+    networks:
+      - bioworkflow-network
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  redis:
+    image: redis:7-alpine
+    container_name: bioworkflow-redis
+    restart: unless-stopped
+    volumes:
+      - redis-data:/data
+    networks:
+      - bioworkflow-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.11.0
+    container_name: bioworkflow-es
+    restart: unless-stopped
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+    volumes:
+      - es-data:/usr/share/elasticsearch/data
+    networks:
+      - bioworkflow-network
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:9200/_cluster/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  # Celery Worker (可选，用于后台任务处理)
+  celery-worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: production
+    image: ghcr.io/${GITHUB_REPOSITORY:-yourusername/bioworkflow}:${TAG:-latest}
+    container_name: bioworkflow-celery
+    restart: unless-stopped
+    command: celery -A backend.tasks worker -l info
+    environment:
+      - DEBUG=false
+      - DATABASE_URL=${DATABASE_URL:-sqlite:///app/data/bioworkflow.db}
+      - REDIS_URL=redis://redis:6379/0
+      - SECRET_KEY=${SECRET_KEY}
+    volumes:
+      - ./data:/app/data
+      - ./workflows:/app/workflows
+      - ./conda_envs:/app/conda_envs
+      - ./logs:/app/logs
+    depends_on:
+      - redis
+      - app
+    networks:
+      - bioworkflow-network
+    profiles:
+      - celery
+
+volumes:
+  redis-data:
+  es-data:
+
+networks:
+  bioworkflow-network:
+    driver: bridge
