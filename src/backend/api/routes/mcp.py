@@ -5,7 +5,7 @@ from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 from uuid import uuid4
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
 from sqlalchemy import desc, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -67,7 +67,7 @@ class MCPServiceModel(Base):
     endpoint = Column(String(500), nullable=False)
     auth_token = Column(String(500), nullable=True)
     capabilities = Column(JSON, default=list)
-    metadata = Column(JSON, default=dict)
+    service_metadata = Column(JSON, default=dict)
     status = Column(String(20), default="active")
     last_heartbeat = Column(String(50), nullable=True)
 

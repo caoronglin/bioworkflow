@@ -1,5 +1,7 @@
 import api from './client'
 
+export { jupyterAPI } from './jupyter'
+
 // Pipelines API
 export const pipelinesAPI = {
   list: () => api.get('/pipelines'),

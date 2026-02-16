@@ -11,13 +11,70 @@ interface User {
   is_superuser: boolean
 }
 
+interface VisitedView {
+  title: string
+  path: string
+  name: string
+}
+
 export const useAppStore = defineStore('app', () => {
+  // 用户状态
   const user = ref<User | null>(null)
   const isLoading = ref(false)
   const token = ref<string | null>(localStorage.getItem('token'))
   const apiUrl = ref(import.meta.env.VITE_API_URL || 'http://localhost:8000/api')
 
+  // UI 状态
+  const isDarkMode = ref(localStorage.getItem('theme') === 'dark')
+  const sidebarCollapsed = ref(false)
+  
+  // 标签页状态
+  const visitedViews = ref<VisitedView[]>([])
+  const cachedViews = ref<string[]>([])
+
   const isAuthenticated = computed(() => !!token.value && !!user.value)
+
+  // 主题切换
+  const toggleTheme = () => {
+    isDarkMode.value = !isDarkMode.value
+    localStorage.setItem('theme', isDarkMode.value ? 'dark' : 'light')
+  }
+
+  // 标签页管理
+  const addView = (view: VisitedView) => {
+    if (!visitedViews.value.some(v => v.path === view.path)) {
+      visitedViews.value.push(view)
+    }
+    if (view.name && !cachedViews.value.includes(view.name)) {
+      cachedViews.value.push(view.name)
+    }
+  }
+
+  const removeView = (path: string) => {
+    const index = visitedViews.value.findIndex(v => v.path === path)
+    if (index > -1) {
+      const view = visitedViews.value[index]
+      visitedViews.value.splice(index, 1)
+      // 从缓存中移除
+      const cacheIndex = cachedViews.value.indexOf(view.name)
+      if (cacheIndex > -1) {
+        cachedViews.value.splice(cacheIndex, 1)
+      }
+    }
+  }
+
+  const closeAllViews = () => {
+    visitedViews.value = []
+    cachedViews.value = []
+  }
+
+  const closeOthersViews = (path: string) => {
+    const current = visitedViews.value.find(v => v.path === path)
+    if (current) {
+      visitedViews.value = [current]
+      cachedViews.value = [current.name]
+    }
+  }
 
   // 设置认证 token
   const setToken = (newToken: string | null) => {
@@ -40,11 +97,9 @@ export const useAppStore = defineStore('app', () => {
     isLoading.value = true
     try {
       const response = await api.post('/auth/login', { username, password })
-      const { access_token, token_type } = response.data
+      const { access_token } = response.data
 
       setToken(access_token)
-
-      // 获取用户信息
       await fetchUserInfo()
 
       return true
@@ -80,7 +135,6 @@ export const useAppStore = defineStore('app', () => {
       user.value = response.data
       return user.value
     } catch (error) {
-      // 如果获取用户信息失败，清除 token
       setToken(null)
       user.value = null
       throw error
@@ -95,6 +149,8 @@ export const useAppStore = defineStore('app', () => {
     } finally {
       setToken(null)
       user.value = null
+      // 清除标签页
+      closeAllViews()
     }
   }
 
@@ -105,7 +161,6 @@ export const useAppStore = defineStore('app', () => {
       setToken(access_token)
       return true
     } catch (error) {
-      // 刷新失败，清除登录状态
       setToken(null)
       user.value = null
       return false
@@ -113,11 +168,23 @@ export const useAppStore = defineStore('app', () => {
   }
 
   return {
+    // 状态
     user,
     isLoading,
     token,
     apiUrl,
+    isDarkMode,
+    sidebarCollapsed,
+    visitedViews,
+    cachedViews,
+    // 计算属性
     isAuthenticated,
+    // 方法
+    toggleTheme,
+    addView,
+    removeView,
+    closeAllViews,
+    closeOthersViews,
     login,
     register,
     logout,

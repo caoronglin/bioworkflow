@@ -4,53 +4,63 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "bioworkflow"
-version = "0.1.0"
+version = "0.2.0"
 description = "A modern biological workflow orchestration platform based on Snakemake"
 readme = "README.md"
-requires-python = ">=3.10"
+requires-python = ">=3.12"
 license = {text = "MIT"}
 authors = [
     {name = "Your Name", email = "your.email@example.com"}
 ]
 
 dependencies = [
-    # Web Framework
+    # Web Framework - Latest stable versions
     "fastapi>=0.115.0",
     "uvicorn[standard]>=0.34.0",
     "pydantic>=2.10.0",
     "pydantic-settings>=2.7.0",
-    
+    "python-multipart>=0.0.20",
+
     # Snakemake Integration
     "snakemake>=9.0.0",
-    
-    # Database
-    "sqlalchemy>=2.0.36",
-    "alembic>=1.14.0",
-    
+
+    # Jupyter Integration
+    "jupyter-client>=8.6.0",
+    "ipykernel>=6.29.0",
+    "nbformat>=5.9.0",
+
+    # Database - Latest async support
+    "sqlalchemy[asyncio]>=2.0.37",
+    "aiosqlite>=0.21.0",
+    "alembic>=1.14.1",
+
     # Async & Tasks
     "celery>=5.4.0",
-    "redis>=5.2.0",
-    
-    # Data Processing - Latest versions
+    "redis>=5.2.1",
+    "asyncpg>=0.30.0",  # PostgreSQL async driver
+
+    # Data Processing - Python 3.14 compatible
     "numpy>=2.2.0",
-    "pandas>=2.0.0",  # Python 3.10 compatible
+    "pandas>=3.0.0",
     "scipy>=1.15.0",
-    "polars>=1.20.0",  # Modern DataFrame alternative
-    "pyarrow>=18.0.0",  # Arrow backend for pandas
-    
-    # Authentication
-    "python-jose[cryptography]>=3.3.0",
+    "polars>=1.21.0",
+    "pyarrow>=19.0.0",
+    "xarray>=2025.1.0",
+
+    # Authentication & Security
+    "python-jose[cryptography]>=3.4.0",
     "passlib[bcrypt]>=1.7.4",
-    "python-multipart>=0.0.20",
-    
+    "bcrypt>=4.2.0",
+
     # Knowledge Base & Search
     "elasticsearch>=8.17.0",
-    "jieba>=0.42.1",
-    
+    "elasticsearch-dsl>=8.17.0",
+
     # MCP & AI Integration
     "aiohttp>=3.11.0",
     "httpx>=0.28.0",
-    
+    "websockets>=14.0",
+
     # Utils
     "python-dotenv>=1.0.1",
     "click>=8.1.8",
@@ -58,26 +68,47 @@ dependencies = [
     "loguru>=0.7.3",
     "PyYAML>=6.0.2",
     "Jinja2>=3.1.5",
-    
+    "orjson>=3.10.0",  # Fast JSON serialization
+    "structlog>=25.1.0",  # Structured logging
+
     # Type hints (Python 3.14 compatible)
     "typing-extensions>=4.12.0",
+
+    # Validation & Parsing
+    "email-validator>=2.2.0",
+    "python-dateutil>=2.9.0",
+
+    # Caching
+    "cachetools>=5.5.0",
+    "diskcache>=5.6.0",
+
+    # Monitoring & Metrics
+    "prometheus-client>=0.21.0",
+    "psutil>=6.1.0",
 ]
 
 [project.optional-dependencies]
 dev = [
-    "pytest>=8.3.0",
+    "pytest>=8.3.4",
     "pytest-asyncio>=0.25.0",
     "pytest-cov>=6.0.0",
-    "black>=24.12.0",
+    "pytest-xdist>=3.6.0",
+    "pytest-mock>=3.14.0",
+    "black>=25.1.0",
     "ruff>=0.9.0",
-    "mypy>=1.14.0",
-    "isort>=5.13.0",
-    "pre-commit>=4.0.0",
+    "mypy>=1.15.0",
+    "isort>=6.0.0",
+    "pre-commit>=4.1.0",
+    "factory-boy>=3.3.0",
+    "faker>=35.0.0",
+    "httpx>=0.28.0",  # For testing FastAPI
+    "asgi-lifespan>=2.1.0",
 ]
 
 docs = [
     "mkdocs>=1.6.0",
-    "mkdocs-material>=9.5.0",
+    "mkdocs-material>=9.6.0",
+    "mkdocstrings[python]>=0.27.0",
 ]
 
 r = [
@@ -88,7 +119,8 @@ r = [
 ml = [
     # Machine Learning (optional)
     "scikit-learn>=1.6.0",
-    "torch>=2.5.0",
+    "torch>=2.6.0",
+    "transformers>=4.48.0",
 ]
 
 [project.urls]
@@ -108,26 +140,52 @@ where = ["src"]
 
 [tool.black]
 line-length = 100
-target-version = ['py313', 'py314']
+target-version = ['py314']
 include = '\.pyi?$'
 
 [tool.ruff]
 line-length = 100
-target-version = "py313"
-select = ["E", "F", "W", "I001", "UP", "B", "C4", "SIM", "PERF", "FURB"]
+target-version = "py314"
+select = [
+    "E",   # pycodestyle errors
+    "F",   # Pyflakes
+    "W",   # pycodestyle warnings
+    "I",   # isort
+    "N",   # pep8-naming
+    "UP",  # pyupgrade
+    "B",   # flake8-bugbear
+    "C4",  # flake8-comprehensions
+    "SIM", # flake8-simplify
+    "PERF",# Perflint
+    "FURB",# refurb
+    "RUF", # Ruff-specific rules
+]
+ignore = ["E501"]  # Line too long (handled by black)
 
 [tool.isort]
 profile = "black"
 line_length = 100
+known_first_party = ["backend", "bioworkflow"]
 
 [tool.mypy]
-python_version = "3.13"
+python_version = "3.14"
 warn_return_any = true
 warn_unused_configs = true
 disallow_untyped_defs = true
 strict = true
+ignore_missing_imports = true
+show_error_codes = true
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "function"
+addopts = "-v --tb=short --strict-markers"
+markers = [
+    "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+    "integration: marks tests as integration tests",
+    "unit: marks tests as unit tests",
+]
+
+[tool.pytest-asyncio]
+asyncio_mode = "auto"

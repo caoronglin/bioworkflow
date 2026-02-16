@@ -70,7 +70,7 @@ class Document(Base):
 
     # 元数据
     tags: Mapped[list[str]] = mapped_column(JSON, default=list)
-    metadata: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    doc_metadata: Mapped[dict | None] = mapped_column(JSON, nullable=True)
 
     # 统计
     view_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
@@ -102,7 +102,7 @@ class Document(Base):
             "category": self.category,
             "category_id": self.category_id,
             "tags": self.tags,
-            "metadata": self.metadata,
+            "metadata": self.doc_metadata,
             "view_count": self.view_count,
             "download_count": self.download_count,
             "indexed_at": self.indexed_at.isoformat() if self.indexed_at else None,

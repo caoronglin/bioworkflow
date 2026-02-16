@@ -32,6 +32,11 @@ const routes = [
     meta: { title: 'MCP 服务' },
   },
   {
+    path: '/notebook',
+    component: () => import('@/pages/Notebook.vue'),
+    meta: { title: 'Notebook' },
+  },
+  {
     path: '/settings',
     component: () => import('@/pages/Settings.vue'),
     meta: { title: '设置' },

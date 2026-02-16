@@ -1,33 +1,43 @@
 """
-services 子模块 - Conda 包管理
+Conda Environment Management Services
 
-提供 Conda 环境管理、包安装、换源等功能
+This package provides both synchronous and asynchronous Conda environment
+management services.
 """
 
-from .manager import (
-    CondaManager,
+# Synchronous manager (legacy)
+from backend.services.conda.manager import CondaManager
+
+# Asynchronous manager (new)
+from backend.services.conda.async_manager import (
+    AsyncCondaManager,
     CondaEnvironment,
     CondaPackage,
-    CondaError,
+    CondaOperationStatus,
+    CondaOperationType,
+    CondaOperationProgress,
     get_conda_manager,
-)
-from .channels import (
-    ChannelManager,
-    ChannelConfig,
-    MIRROR_SOURCES,
-    BIOINFORMATICS_CHANNELS,
-    get_channel_manager,
+    shutdown_conda_manager,
+    create_environment,
+    delete_environment,
+    list_environments,
+    install_packages,
 )
 
 __all__ = [
+    # Synchronous
     "CondaManager",
+    # Asynchronous
+    "AsyncCondaManager",
     "CondaEnvironment",
     "CondaPackage",
-    "CondaError",
+    "CondaOperationStatus",
+    "CondaOperationType",
+    "CondaOperationProgress",
     "get_conda_manager",
-    "ChannelManager",
-    "ChannelConfig",
-    "MIRROR_SOURCES",
-    "BIOINFORMATICS_CHANNELS",
-    "get_channel_manager",
+    "shutdown_conda_manager",
+    "create_environment",
+    "delete_environment",
+    "list_environments",
+    "install_packages",
 ]

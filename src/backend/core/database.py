@@ -1,4 +1,8 @@
-"""数据库连接和会话管理 - 支持高并发"""
+"""
+数据库连接和会话管理 - Python 3.14 优化版本
+
+支持高并发和连接池管理
+"""
 
 from contextlib import asynccontextmanager
 from typing import AsyncGenerator
@@ -13,24 +17,31 @@ from sqlalchemy.pool import NullPool
 from backend.core.config import settings
 from backend.models.base import Base
 
-# 创建异步引擎 - 优化连接池以支持高并发
-engine = create_async_engine(
-    settings.DATABASE_URL.replace("sqlite:///", "sqlite+aiosqlite:///"),
-    echo=settings.DEBUG,
-    poolclass=NullPool,  # SQLite 使用 NullPool 避免并发问题
-    # 对于 PostgreSQL/MySQL，使用以下配置：
-    # pool_size=20,              # 基础连接数
-    # max_overflow=30,           # 额外连接数
-    # pool_pre_ping=True,        # 连接健康检查
-    # pool_recycle=3600,         # 连接回收时间
-)
+# 创建异步引擎
+if settings.DATABASE_URL.startswith("sqlite"):
+    # SQLite 使用 NullPool 避免并发问题
+    engine = create_async_engine(
+        settings.database_async_url,
+        echo=settings.DATABASE_ECHO,
+        poolclass=NullPool,
+    )
+else:
+    # PostgreSQL/MySQL 使用连接池
+    engine = create_async_engine(
+        settings.database_async_url,
+        echo=settings.DATABASE_ECHO,
+        pool_size=settings.DATABASE_POOL_SIZE,
+        max_overflow=settings.DATABASE_MAX_OVERFLOW,
+        pool_pre_ping=True,
+        pool_recycle=settings.DATABASE_POOL_RECYCLE,
+    )
 
 # 异步会话工厂
 AsyncSessionLocal = async_sessionmaker(
     engine,
     class_=AsyncSession,
-    expire_on_commit=False,  # 避免过期问题，支持高并发
-    autoflush=False,         # 手动控制 flush
+    expire_on_commit=False,
+    autoflush=False,
 )
 
 
@@ -51,10 +62,8 @@ async def get_session() -> AsyncGenerator[AsyncSession, None]:
     获取数据库会话的上下文管理器
 
     使用示例:
-    ```python
-    async with get_session() as session:
-        result = await session.execute(query)
-    ```
+        async with get_session() as session:
+            result = await session.execute(query)
     """
     session = AsyncSessionLocal()
     try:
@@ -73,12 +82,10 @@ async def get_db() -> AsyncGenerator[AsyncSession, None]:
     FastAPI 依赖 - 获取数据库会话
 
     使用示例:
-    ```python
-    @router.get("/items")
-    async def list_items(db: AsyncSession = Depends(get_db)):
-        result = await db.execute(select(Item))
-        return result.scalars().all()
-    ```
+        @router.get("/items")
+        async def list_items(db: AsyncSession = Depends(get_db)):
+            result = await db.execute(select(Item))
+            return result.scalars().all()
     """
     async with get_session() as session:
         yield session

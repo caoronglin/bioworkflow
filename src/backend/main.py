@@ -1,6 +1,6 @@
 """
 BioWorkflow - 生物信息学工作流管理平台
-主应用入口和配置
+主应用入口和配置 - Python 3.14 优化版本
 """
 
 from contextlib import asynccontextmanager
@@ -12,16 +12,19 @@ from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.responses import JSONResponse
 from loguru import logger
 
-from .api import router as api_router
-from .core.config import settings
-from .core.logging import setup_logging
+from backend.api import api_router
+from backend.core.config import settings
+from backend.core.logging import setup_logging
+from backend.middleware import PerformanceMiddleware
+from backend.middleware import RateLimitMiddleware
+from backend.middleware import SecurityHeadersMiddleware
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """应用生命周期管理 - 高性能初始化"""
     from backend.core.database import init_db, close_db
-    from backend.core.events import event_bus
+    from backend.infrastructure.events.event_bus import event_bus
 
     # 启动事件
     setup_logging()
@@ -29,41 +32,41 @@ async def lifespan(app: FastAPI):
     # 初始化数据库
     try:
         await init_db()
-        logger.info("✅ 数据库初始化完成")
+        logger.info("✅ Database initialized")
     except Exception as e:
-        logger.error(f"❌ 数据库初始化失败: {e}")
+        logger.error(f"❌ Database initialization failed: {e}")
         raise
 
-    logger.info(f"🚀 BioWorkflow 应用启动 - 版本: {settings.VERSION}")
+    logger.info(f"🚀 BioWorkflow v{settings.VERSION} started in {settings.ENVIRONMENT} mode")
 
     # 发布启动事件
-    await event_bus.publish(event_bus.Event(
-        event_type="app.started",
-        payload={"version": settings.VERSION, "timestamp": str(datetime.utcnow())},
-    ))
+    await event_bus.publish(
+        "app.started",
+        {"version": settings.VERSION, "timestamp": datetime.utcnow().isoformat()},
+    )
 
     yield
 
     # 关闭事件
-    logger.info("👋 BioWorkflow 应用关闭中...")
+    logger.info("👋 BioWorkflow shutting down...")
 
     # 关闭数据库
     await close_db()
 
     # 发布关闭事件
-    await event_bus.publish(event_bus.Event(
-        event_type="app.shutdown",
-        payload={"timestamp": str(datetime.utcnow())},
-    ))
+    await event_bus.publish(
+        "app.shutdown",
+        {"timestamp": datetime.utcnow().isoformat()},
+    )
 
-    logger.info("✅ 应用已安全关闭")
+    logger.info("✅ Application shutdown complete")
 
 
 def create_app() -> FastAPI:
     """创建 FastAPI 应用 - 高性能配置"""
     app = FastAPI(
         title="BioWorkflow API",
-        description="生物信息学工作流管理平台 API - 高性能、模块化、易扩展",
+        description="现代生物信息学工作流管理平台 API - Python 3.14 优化",
         version=settings.VERSION,
         lifespan=lifespan,
         docs_url="/docs" if settings.DEBUG else None,
@@ -71,80 +74,95 @@ def create_app() -> FastAPI:
         openapi_url="/openapi.json" if settings.DEBUG else None,
     )
 
-    # 全局异常处理中间件
-    @app.middleware("http")
-    async def exception_middleware(request: Request, call_next):
-        try:
-            return await call_next(request)
-        except Exception as exc:
-            logger.exception(f"Unhandled exception: {exc}")
-            return JSONResponse(
-                status_code=500,
-                content={"detail": "Internal server error"},
-            )
+    # 安全响应头中间件（最先添加，确保在所有响应中添加安全头）
+    app.add_middleware(
+        SecurityHeadersMiddleware,
+        # HSTS配置（仅生产环境启用）
+        hsts_max_age=31536000 if settings.ENVIRONMENT == "production" else 0,
+        hsts_include_subdomains=True,
+        # CSP报告模式（初期可以只报告不阻止，调优后再启用）
+        csp_report_only=settings.ENVIRONMENT != "production",
+    )
 
-    # 请求日志中间件
-    @app.middleware("http")
-    async def logging_middleware(request: Request, call_next):
-        start_time = datetime.utcnow()
-        response = await call_next(request)
-        duration = (datetime.utcnow() - start_time).total_seconds()
-        logger.info(
-            f"{request.method} {request.url.path} - {response.status_code} - {duration:.3f}s"
-        )
-        return response
+    # 性能监控中间件
+    app.add_middleware(
+        PerformanceMiddleware,
+        slow_request_threshold=1.0,
+    )
 
     # Gzip 压缩中间件
     app.add_middleware(GZipMiddleware, minimum_size=1000)
+
+    # 速率限制中间件（必须在CORS之前）
+    app.add_middleware(
+        RateLimitMiddleware,
+        redis_client=None,  # 暂时使用本地模式，后续接入Redis
+        whitelist=["127.0.0.1", "::1"],  # 本地开发环境白名单
+    )
 
     # CORS 配置
     app.add_middleware(
         CORSMiddleware,
         allow_origins=settings.CORS_ORIGINS,
-        allow_credentials=True,
-        allow_methods=["*"],
-        allow_headers=["*"],
+        allow_credentials=settings.CORS_ALLOW_CREDENTIALS,
+        allow_methods=settings.CORS_ALLOW_METHODS,
+        allow_headers=settings.CORS_ALLOW_HEADERS,
     )
+
+    # 全局异常处理
+    @app.exception_handler(Exception)
+    async def global_exception_handler(request: Request, exc: Exception):
+        logger.exception(f"Unhandled exception: {exc}")
+        return JSONResponse(
+            status_code=500,
+            content={
+                "detail": "Internal server error",
+                "request_id": getattr(request.state, "request_id", None),
+            },
+        )
 
     # 包含 API 路由
     app.include_router(api_router, prefix="/api")
 
-    # 根路径健康检查端点
+    # 根路径健康检查
     @app.get("/health")
     async def health_check():
         return {
             "status": "healthy",
             "version": settings.VERSION,
+            "environment": settings.ENVIRONMENT,
             "timestamp": datetime.utcnow().isoformat(),
         }
 
-    # 详细健康检查端点
-    @app.get("/health/detailed")
-    async def detailed_health_check():
+    # 就绪检查
+    @app.get("/ready")
+    async def readiness_check():
         checks = {
             "api": True,
-            "database": False,
+            "database": await _check_database(),
         }
-
-        # 检查数据库
-        try:
-            from backend.core.database import engine
-            async with engine.connect() as conn:
-                await conn.execute("SELECT 1")
-            checks["database"] = True
-        except Exception as e:
-            logger.warning(f"Database health check failed: {e}")
 
         overall = all(checks.values())
 
         return {
-            "status": "healthy" if overall else "degraded",
-            "version": settings.VERSION,
-            "timestamp": datetime.utcnow().isoformat(),
+            "status": "ready" if overall else "not_ready",
             "checks": checks,
         }
 
     return app
+
+
+async def _check_database() -> bool:
+    """检查数据库连接"""
+    try:
+        from backend.core.database import engine
+        from sqlalchemy import text
+
+        async with engine.connect() as conn:
+            await conn.execute(text("SELECT 1"))
+        return True
+    except Exception:
+        return False
 
 
 app = create_app()

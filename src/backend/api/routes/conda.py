@@ -1,203 +1,352 @@
-"""Conda 包管理路由"""
+"""
+Conda Environment Management API Routes (Async)
 
-from fastapi import APIRouter, Query, HTTPException
-from pydantic import BaseModel
-from typing import List, Optional
+This module provides RESTful API endpoints for asynchronous Conda
+environment management operations.
+"""
 
-from backend.services.conda import (
-    CondaEnvironment as CondaEnvModel,
-    CondaPackage as CondaPkgModel,
+from __future__ import annotations
+
+import asyncio
+from typing import Any, Dict, List, Optional
+
+from fastapi import APIRouter, Depends, HTTPException, Query, BackgroundTasks
+from fastapi.responses import JSONResponse, StreamingResponse
+from pydantic import BaseModel, Field
+
+from backend.core.logging import get_logger
+from backend.services.conda.async_manager import (
+    AsyncCondaManager,
+    CondaEnvironment,
+    CondaOperationProgress,
+    CondaOperationStatus,
+    CondaOperationType,
     get_conda_manager,
-    get_channel_manager,
+    create_environment as create_env,
+    delete_environment as delete_env,
+    list_environments as list_envs,
+    install_packages as install_pkgs,
 )
 
-router = APIRouter()
+logger = get_logger(__name__)
+router = APIRouter(prefix="/conda", tags=["conda"])
 
 
-class CondaEnvironment(BaseModel):
+# ============================================================================
+# Pydantic Models
+# ============================================================================
+
+class CreateEnvironmentRequest(BaseModel):
+    """Request model for creating an environment."""
+    name: str = Field(..., description="Environment name")
+    python_version: Optional[str] = Field(None, description="Python version (e.g., '3.11')")
+    packages: Optional[List[str]] = Field(None, description="Packages to install")
+    channels: Optional[List[str]] = Field(None, description="Channels to use")
+
+
+class DeleteEnvironmentRequest(BaseModel):
+    """Request model for deleting an environment."""
+    name: str = Field(..., description="Environment name")
+
+
+class InstallPackagesRequest(BaseModel):
+    """Request model for installing packages."""
+    environment_name: str = Field(..., description="Target environment name")
+    packages: List[str] = Field(..., description="Packages to install")
+    channels: Optional[List[str]] = Field(None, description="Channels to use")
+
+
+class EnvironmentResponse(BaseModel):
+    """Response model for environment information."""
     name: str
-    path: str
-    is_active: bool = False
+    path: Optional[str] = None
     python_version: Optional[str] = None
     packages_count: int = 0
 
-
-class CondaPackage(BaseModel):
-    name: str
-    version: str
-    channel: str
-    description: Optional[str] = None
-    installed: bool
+    class Config:
+        from_attributes = True
 
 
-class ChannelConfig(BaseModel):
-    channels: List[str]
+class OperationResponse(BaseModel):
+    """Response model for operation submission."""
+    operation_id: str
+    status: str
+    message: str
+
+    class Config:
+        from_attributes = True
 
 
-@router.get("/envs", response_model=List[CondaEnvironment])
-async def list_conda_environments():
+class OperationStatusResponse(BaseModel):
+    """Response model for operation status."""
+    operation_id: str
+    operation_type: str
+    status: str
+    environment_name: Optional[str]
+    progress_percentage: float
+    current_step: str
+    completed_steps: int
+    total_steps: int
+    duration_seconds: float
+    messages: List[str]
+
+    class Config:
+        from_attributes = True
+
+
+# ============================================================================
+# Dependency Injection
+# ============================================================================
+
+async def get_conda_manager_dependency() -> AsyncCondaManager:
+    """Dependency to get the Conda manager."""
+    return await get_conda_manager()
+
+
+# ============================================================================
+# API Endpoints
+# ============================================================================
+
+@router.get("/environments", response_model=List[EnvironmentResponse])
+async def list_environments(
+    manager: AsyncCondaManager = Depends(get_conda_manager_dependency),
+) -> List[EnvironmentResponse]:
     """
-    列出系统中所有的 Conda 环境
+    List all Conda environments.
+
+    Returns a list of all Conda environments on the system.
     """
-    manager = get_conda_manager()
-    envs = await manager.list_environments()
-    return [
-        CondaEnvironment(
-            name=e.name,
-            path=e.path,
-            is_active=e.is_active,
-            packages_count=len(e.packages) if e.packages else 0,
-        )
-        for e in envs
-    ]
-
-
-@router.post("/envs")
-async def create_conda_environment(
-    name: str,
-    packages: Optional[List[str]] = None,
-):
-    """
-    创建新的 Conda 环境
-    
-    - **name**: 环境名称
-    - **packages**: 要安装的包列表
-    """
-    manager = get_conda_manager()
-    env = await manager.create_environment(name=name, packages=packages or [])
-    return {"message": f"已创建环境: {name}", "environment": env.name}
-
-
-@router.delete("/envs/{env_name}")
-async def delete_conda_environment(env_name: str):
-    """删除 Conda 环境"""
-    manager = get_conda_manager()
-    await manager.remove_environment(env_name)
-    return {"message": f"环境 {env_name} 已删除"}
-
-
-@router.get("/envs/{env_name}/packages", response_model=List[CondaPackage])
-async def list_environment_packages(env_name: str):
-    """列出特定环境中已安装的包"""
-    manager = get_conda_manager()
-    packages = await manager.list_packages(env_name)
-    return [
-        CondaPackage(
-            name=p.name,
-            version=p.version,
-            channel=p.channel,
-            installed=True,
-        )
-        for p in packages
-    ]
-
-
-@router.get("/packages", response_model=List[CondaPackage])
-async def search_packages(
-    query: str,
-    channel: Optional[str] = "bioconda",
-    skip: int = Query(0, ge=0),
-    limit: int = Query(20, ge=1, le=100),
-):
-    """
-    搜索 Conda 包
-    
-    - **query**: 搜索关键词
-    - **channel**: 搜索的频道
-    - **skip**: 跳过的记录数
-    - **limit**: 返回的最大记录数
-    """
-    manager = get_conda_manager()
-    results = await manager.search_packages(query=query, channel=channel, limit=limit + skip)
-    sliced = results[skip : skip + limit]
-    return [
-        CondaPackage(
-            name=p.name,
-            version=p.version,
-            channel=p.channel,
-            installed=False,
-        )
-        for p in sliced
-    ]
-
-
-@router.post("/packages/install")
-async def install_package(
-    package_name: str,
-    version: Optional[str] = None,
-    environment: Optional[str] = "base",
-):
-    """
-    安装 Conda 包
-    
-    - **package_name**: 包名称
-    - **version**: 包版本（可选）
-    - **environment**: 目标环境
-    """
-    manager = get_conda_manager()
-    pkg_spec = f"{package_name}={version}" if version else package_name
-    await manager.install_packages(env_name=environment, packages=[pkg_spec])
-    return {
-        "message": f"正在安装包: {pkg_spec}",
-        "package": package_name,
-        "environment": environment,
-    }
-
-
-@router.post("/packages/uninstall")
-async def uninstall_package(
-    package_name: str,
-    environment: Optional[str] = "base",
-):
-    """卸载 Conda 包"""
-    manager = get_conda_manager()
-    await manager.remove_packages(env_name=environment, packages=[package_name])
-    return {
-        "message": f"已卸载包: {package_name}",
-        "package": package_name,
-        "environment": environment,
-    }
-
-
-@router.get("/channels")
-async def get_conda_channels():
-    """获取当前配置的 Conda 频道"""
-    cm = get_channel_manager()
-    return {"channels": cm.get_channels(), "available_mirrors": cm.get_available_mirrors()}
-
-
-@router.post("/channels")
-async def configure_channels(config: ChannelConfig):
-    """
-    配置 Conda 频道
-    
-    支持在 Web 界面中切换频道源
-    """
-    cm = get_channel_manager()
-    cm.save_config({"channels": config.channels, "show_channel_urls": True})
-    return {"message": "频道已更新", "channels": config.channels}
-
-
-@router.get("/config")
-async def get_conda_config():
-    """获取完整的 Conda 配置信息"""
-    cm = get_channel_manager()
-    channels = cm.get_channels()
-    manager = get_conda_manager()
     try:
-        manager._ensure_ready()
-        version_info = subprocess.run(
-            [manager.conda_path, "--version"],
-            capture_output=True,
-            text=True,
-            timeout=10,
+        environments = await manager.list_environments()
+        return [
+            EnvironmentResponse(
+                name=env.name,
+                path=env.path,
+                python_version=env.python_version,
+                packages_count=len(env.packages),
+            )
+            for env in environments
+        ]
+    except Exception as e:
+        logger.exception("Failed to list environments")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to list environments: {str(e)}"
         )
-        version = version_info.stdout.strip()
-    except Exception:
-        version = "unknown"
 
-    return {
-        "conda_root": manager.conda_path,
-        "version": version,
-        "channels": channels,
-    }
+
+@router.post("/environments", response_model=OperationResponse)
+async def create_environment(
+    request: CreateEnvironmentRequest,
+    background_tasks: BackgroundTasks,
+    manager: AsyncCondaManager = Depends(get_conda_manager_dependency),
+) -> OperationResponse:
+    """
+    Create a new Conda environment asynchronously.
+
+    This endpoint initiates an asynchronous environment creation operation.
+    Use the returned operation_id to track progress.
+    """
+    try:
+        operation_id = await manager.create_environment(
+            name=request.name,
+            python_version=request.python_version,
+            packages=request.packages,
+            channels=request.channels,
+        )
+
+        return OperationResponse(
+            operation_id=operation_id,
+            status="queued",
+            message=f"Environment creation '{request.name}' queued successfully",
+        )
+
+    except Exception as e:
+        logger.exception(f"Failed to queue environment creation: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to create environment: {str(e)}"
+        )
+
+
+@router.delete("/environments/{name}", response_model=OperationResponse)
+async def delete_environment(
+    name: str,
+    manager: AsyncCondaManager = Depends(get_conda_manager_dependency),
+) -> OperationResponse:
+    """
+    Delete a Conda environment asynchronously.
+
+    This endpoint initiates an asynchronous environment deletion operation.
+    """
+    try:
+        operation_id = await manager.delete_environment(name=name)
+
+        return OperationResponse(
+            operation_id=operation_id,
+            status="queued",
+            message=f"Environment deletion '{name}' queued successfully",
+        )
+
+    except Exception as e:
+        logger.exception(f"Failed to queue environment deletion: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to delete environment: {str(e)}"
+        )
+
+
+@router.post("/environments/{name}/packages", response_model=OperationResponse)
+async def install_packages(
+    name: str,
+    request: InstallPackagesRequest,
+    manager: AsyncCondaManager = Depends(get_conda_manager_dependency),
+) -> OperationResponse:
+    """
+    Install packages into a Conda environment asynchronously.
+
+    This endpoint initiates an asynchronous package installation operation.
+    """
+    try:
+        operation_id = await manager.install_packages(
+            environment_name=name,
+            packages=request.packages,
+            channels=request.channels,
+        )
+
+        return OperationResponse(
+            operation_id=operation_id,
+            status="queued",
+            message=f"Package installation into '{name}' queued successfully",
+        )
+
+    except Exception as e:
+        logger.exception(f"Failed to queue package installation: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to install packages: {str(e)}"
+        )
+
+
+@router.get("/operations/{operation_id}", response_model=OperationStatusResponse)
+async def get_operation_status(
+    operation_id: str,
+    manager: AsyncCondaManager = Depends(get_conda_manager_dependency),
+) -> OperationStatusResponse:
+    """
+    Get the status of an asynchronous operation.
+
+    Use this endpoint to poll for operation progress.
+    """
+    try:
+        progress = await manager.get_operation_status(operation_id)
+
+        if not progress:
+            raise HTTPException(
+                status_code=404,
+                detail=f"Operation {operation_id} not found"
+            )
+
+        return OperationStatusResponse(
+            operation_id=progress.operation_id,
+            operation_type=progress.operation_type.value,
+            status=progress.status.value,
+            environment_name=progress.environment_name,
+            progress_percentage=progress.progress_percentage,
+            current_step=progress.current_step,
+            completed_steps=progress.completed_steps,
+            total_steps=progress.total_steps,
+            duration_seconds=progress.duration_seconds,
+            messages=progress.messages,
+        )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.exception(f"Failed to get operation status: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to get operation status: {str(e)}"
+        )
+
+
+@router.get("/operations", response_model=List[OperationStatusResponse])
+async def list_operations(
+    status: Optional[str] = Query(None, description="Filter by status"),
+    manager: AsyncCondaManager = Depends(get_conda_manager_dependency),
+) -> List[OperationStatusResponse]:
+    """
+    List all asynchronous operations.
+
+    Optionally filter by status (pending, running, completed, failed, cancelled).
+    """
+    try:
+        target_status = None
+        if status:
+            try:
+                target_status = CondaOperationStatus(status)
+            except ValueError:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Invalid status: {status}"
+                )
+
+        operations = await manager.list_operations(status=target_status)
+
+        return [
+            OperationStatusResponse(
+                operation_id=op.operation_id,
+                operation_type=op.operation_type.value,
+                status=op.status.value,
+                environment_name=op.environment_name,
+                progress_percentage=op.progress_percentage,
+                current_step=op.current_step,
+                completed_steps=op.completed_steps,
+                total_steps=op.total_steps,
+                duration_seconds=op.duration_seconds,
+                messages=op.messages,
+            )
+            for op in operations
+        ]
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.exception(f"Failed to list operations: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to list operations: {str(e)}"
+        )
+
+
+@router.post("/operations/{operation_id}/cancel")
+async def cancel_operation(
+    operation_id: str,
+    manager: AsyncCondaManager = Depends(get_conda_manager_dependency),
+) -> Dict[str, Any]:
+    """
+    Cancel a running operation.
+    """
+    try:
+        success = await manager.cancel_operation(operation_id)
+
+        if not success:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Cannot cancel operation {operation_id}. It may not exist or is already finished."
+            )
+
+        return {
+            "operation_id": operation_id,
+            "status": "cancelled",
+            "message": "Operation cancellation requested",
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.exception(f"Failed to cancel operation: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to cancel operation: {str(e)}"
+        )
