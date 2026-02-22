@@ -1,0 +1,91 @@
+[workspace]
+members = [
+    "crates/bioworkflow-core",
+    "crates/bioworkflow-dag",
+    "crates/bioworkflow-io",
+    "crates/bioworkflow-scheduler",
+    "crates/bioworkflow-python",
+]
+resolver = "2"
+
+[workspace.package]
+version = "0.1.0-alpha.1"
+edition = "2021"
+authors = ["BioWorkflow Team <team@bioworkflow.org>"]
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/bioworkflow/bioworkflow"
+homepage = "https://bioworkflow.org"
+
+[workspace.dependencies]
+# 核心依赖
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+tokio = { version = "1.35", features = ["full"] }
+async-trait = "0.1"
+futures = "0.3"
+
+# 错误处理
+thiserror = "1.0"
+anyhow = "1.0"
+
+# 并发与并行
+rayon = "1.8"
+dashmap = "5.5"
+parking_lot = "0.12"
+crossbeam = "0.8"
+
+# 图算法
+petgraph = "0.6"
+
+# 高性能 I/O
+memmap2 = "0.9"
+io-uring = "0.6"
+
+# gRPC / 网络
+tonic = "0.10"
+tonic-build = "0.10"
+prost = "0.12"
+tower = "0.4"
+hyper = "1.0"
+
+# 日志与监控
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter", "json"] }
+metrics = "0.22"
+metrics-exporter-prometheus = "0.13"
+
+# 配置管理
+config = "0.14"
+dotenvy = "0.15"
+
+# Python 绑定
+pyo3 = { version = "0.20", features = ["extension-module", "multiple-pymethods"] }
+pyo3-asyncio = { version = "0.20", features = ["tokio-runtime"] }
+numpy = { version = "0.20", optional = true }
+
+# 测试
+mockall = "0.12"
+tempfile = "3.9"
+wiremock = "0.6"
+criterion = { version = "0.5", features = ["async_tokio"] }
+proptest = "1.4"
+
+# 内部 crate 依赖
+bioworkflow-core = { path = "crates/bioworkflow-core" }
+
+[profile.dev]
+opt-level = 0
+debug = true
+lto = false
+
+[profile.release]
+opt-level = 3
+debug = false
+lto = true
+codegen-units = 1
+panic = "abort"
+strip = true
+
+[profile.bench]
+inherits = "release"
+debug = true

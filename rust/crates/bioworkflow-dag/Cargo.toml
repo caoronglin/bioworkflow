@@ -1,0 +1,50 @@
+[package]
+name = "bioworkflow-dag"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "DAG (Directed Acyclic Graph) engine for workflow execution"
+
+[dependencies]
+# 核心依赖
+bioworkflow-core = { path = "../bioworkflow-core" }
+
+# 图算法
+petgraph = "0.6"
+
+# 并发与并行
+rayon = "1.8"
+crossbeam = "0.8"
+dashmap = "5.5"
+parking_lot = "0.12"
+
+# 序列化
+serde = { workspace = true }
+serde_json = { workspace = true }
+
+# 错误处理
+thiserror = { workspace = true }
+anyhow = { workspace = true }
+
+# 异步
+tokio = { workspace = true }
+async-trait = { workspace = true }
+
+# 日志
+tracing = { workspace = true }
+
+# 配置
+config = { workspace = true }
+dotenvy = { workspace = true }
+
+# 测试
+#[dev-dependencies]
+mockall = { workspace = true, optional = true }
+proptest = { workspace = true, optional = true }
+
+[features]
+default = ["python"]
+python = ["pyo3", "bioworkflow-core/python"]
+test-utils = ["mockall", "proptest"]

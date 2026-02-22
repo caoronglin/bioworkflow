@@ -1,0 +1,118 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: workflow-service
+  namespace: bioworkflow
+  labels:
+    app: workflow-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: workflow-service
+  template:
+    metadata:
+      labels:
+        app: workflow-service
+    spec:
+      containers:
+        - name: workflow-service
+          image: workflow-service:0.1.0
+          ports:
+            - containerPort: 8001
+            - containerPort: 8002
+          env:
+            - name: WORKFLOW_DATABASE_URL
+              value: "postgresql://postgres:password@workflow-db:5432/workflow_db"
+            - name: WORKFLOW_LOG_LEVEL
+              value: "INFO"
+            - name: WORKFLOW_SCHEDULING_STRATEGY
+              value: "fifo"
+            - name: WORKFLOW_MONITORING_ENABLED
+              value: "true"
+            - name: WORKFLOW_METRICS_PORT
+              value: "8002"
+          volumeMounts:
+            - name: workflow-data
+              mountPath: /app/data
+            - name: workflow-logs
+              mountPath: /app/logs
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "500m"
+            limits:
+              memory: "512Mi"
+              cpu: "1000m"
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8001
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8001
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            failureThreshold: 3
+      volumes:
+        - name: workflow-data
+          persistentVolumeClaim:
+            claimName: workflow-data-pvc
+        - name: workflow-logs
+          persistentVolumeClaim:
+            claimName: workflow-logs-pvc
+
+---
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: workflow-service
+  namespace: bioworkflow
+  labels:
+    app: workflow-service
+spec:
+  type: ClusterIP
+  selector:
+    app: workflow-service
+  ports:
+    - port: 8001
+      targetPort: 8001
+      name: api
+    - port: 8002
+      targetPort: 8002
+      name: metrics
+
+---
+
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: workflow-data-pvc
+  namespace: bioworkflow
+  labels:
+    app: workflow-service
+spec:
+  accessModes: [ "ReadWriteOnce" ]
+  resources:
+    requests:
+      storage: 1Gi
+
+---
+
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: workflow-logs-pvc
+  namespace: bioworkflow
+  labels:
+    app: workflow-service
+spec:
+  accessModes: [ "ReadWriteOnce" ]
+  resources:
+    requests:
+      storage: 1Gi

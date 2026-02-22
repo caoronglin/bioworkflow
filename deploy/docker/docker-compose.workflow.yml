@@ -1,0 +1,81 @@
+version: "3.8"
+
+services:
+  workflow-service:
+    build:
+      context: ../..
+      dockerfile: services/workflow-service/Dockerfile
+    image: workflow-service:0.1.0
+    container_name: workflow-service
+    ports:
+      - "8001:8001"
+      - "8002:8002"
+    environment:
+      - WORKFLOW_DATABASE_URL=postgresql://postgres:password@db:5432/workflow_db
+      - WORKFLOW_LOG_LEVEL=INFO
+      - WORKFLOW_SCHEDULING_STRATEGY=fifo
+      - WORKFLOW_MONITORING_ENABLED=true
+      - WORKFLOW_METRICS_PORT=8002
+    volumes:
+      - workflow_data:/app/data
+      - workflow_logs:/app/logs
+    depends_on:
+      - db
+    networks:
+      - workflow-network
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:8001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+  db:
+    image: postgres:14
+    container_name: workflow-db
+    environment:
+      - POSTGRES_DB=workflow_db
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=password
+    volumes:
+      - db_data:/var/lib/postgresql/data
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - workflow-network
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  redis:
+    image: redis:7
+    container_name: workflow-redis
+    command: redis-server --appendonly yes --requirepass "password"
+    volumes:
+      - redis_data:/data
+    networks:
+      - workflow-network
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+volumes:
+  db_data:
+    driver: local
+  redis_data:
+    driver: local
+  workflow_data:
+    driver: local
+  workflow_logs:
+    driver: local
+
+networks:
+  workflow-network:
+    driver: bridge
