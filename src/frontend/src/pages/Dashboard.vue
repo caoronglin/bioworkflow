@@ -54,7 +54,7 @@
           <template #header>
             <div class="card-header">
               <div class="header-title">
-                <el-icon><PieChart /></el-icon>
+                <el-icon><PieChartIcon /></el-icon>
                 <span>状态分布</span>
               </div>
             </div>
@@ -167,7 +167,7 @@ import {
   CircleCheck,
   Warning,
   InfoFilled,
-  PieChart,
+  PieChart as PieChartIcon,
 } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import { pipelinesAPI, condaAPI, knowledgeAPI, mcpAPI } from '@/api'

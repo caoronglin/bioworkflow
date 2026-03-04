@@ -97,7 +97,7 @@ export const useAppStore = defineStore('app', () => {
     isLoading.value = true
     try {
       const response = await api.post('/auth/login', { username, password })
-      const { access_token } = response.data
+      const { access_token } = response as any
 
       setToken(access_token)
       await fetchUserInfo()
@@ -132,7 +132,7 @@ export const useAppStore = defineStore('app', () => {
   async function fetchUserInfo() {
     try {
       const response = await api.get('/auth/me')
-      user.value = response.data
+      user.value = response as any
       return user.value
     } catch (error) {
       setToken(null)
@@ -157,7 +157,7 @@ export const useAppStore = defineStore('app', () => {
   async function refreshToken() {
     try {
       const response = await api.post('/auth/refresh-token')
-      const { access_token } = response.data
+      const { access_token } = response as any
       setToken(access_token)
       return true
     } catch (error) {
