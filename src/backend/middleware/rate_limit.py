@@ -18,10 +18,10 @@ from fastapi.responses import JSONResponse
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.types import ASGIApp
 from redis.asyncio import Redis
+from jose import jwt as jose_jwt, JWTError
 
 from backend.core.logging import get_logger
 from backend.core.config import settings
-
 logger = get_logger("rate_limiter")
 
 
@@ -323,6 +323,9 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         if client_ip in self.whitelist:
             return await call_next(request)
 
+        # 从 app.state 获取 Redis 客户端（lifespan 中注入）
+        redis_client = self.redis or getattr(request.app.state, "redis_client", None)
+
         # 确定使用的配置
         config = self._get_config_for_path(request.url.path)
 
@@ -330,15 +333,15 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         key = self._build_limit_key(request, config)
 
         # 检查是否被封禁
-        if self.redis:
-            is_blocked = await self.redis.exists(
+        if redis_client:
+            is_blocked = await redis_client.exists(
                 f"{config.key_prefix}:block:{key}"
             )
             if is_blocked:
                 return self._create_blocked_response(config)
 
         # 执行速率限制检查
-        allowed, headers = await self.limiter.is_allowed(key, config, self.redis)
+        allowed, headers = await self.limiter.is_allowed(key, config, redis_client)
 
         if not allowed:
             return self._create_rate_limit_response(headers)
@@ -387,13 +390,13 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
 
         组合多个维度：
         - 客户端IP
-        - 用户ID（如果已认证）
+        - 用户ID（从JWT Authorization header提取）
         - 请求路径
         """
         client_ip = self._get_client_ip(request)
 
-        # 尝试获取用户ID（从请求状态或JWT）
-        user_id = getattr(request.state, "user_id", None)
+        # 从 Authorization header 提取用户ID
+        user_id = self._extract_user_id_from_jwt(request)
 
         if user_id:
             # 已认证用户：使用用户ID作为限制键
@@ -401,6 +404,30 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         else:
             # 未认证用户：使用IP作为限制键
             return f"ip:{client_ip}:{request.url.path}"
+
+    @staticmethod
+    def _extract_user_id_from_jwt(request: Request) -> str | None:
+        """
+        从 Authorization header 中提取用户ID
+
+        直接解码JWT而不依赖 request.state（中间件在路由处理前执行）
+        """
+        auth_header = request.headers.get("authorization", "")
+        if not auth_header.lower().startswith("bearer "):
+            return None
+
+        token = auth_header[7:]  # 去掉 'Bearer ' 前缀
+        try:
+            payload = jose_jwt.decode(
+                token,
+                settings.SECRET_KEY,
+                algorithms=[settings.ALGORITHM],
+            )
+            return payload.get("sub")
+        except JWTError:
+            return None
+        except Exception:
+            return None
 
     def _create_rate_limit_response(self, headers: dict) -> JSONResponse:
         """创建速率限制响应"""
