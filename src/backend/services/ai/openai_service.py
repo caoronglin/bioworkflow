@@ -9,12 +9,17 @@ Provides AI-powered features including:
 """
 
 import os
+import asyncio
+import logging
 import json
 from typing import List, Dict, Any, AsyncGenerator, Optional
 from datetime import datetime
 from openai import AsyncOpenAI
 from pydantic import BaseModel, Field
 import pandas as pd
+
+logger = logging.getLogger(__name__)
+MAX_DATA_ROWS = 10000
 
 
 class ChatMessage(BaseModel):
@@ -124,6 +129,14 @@ class OpenAIService:
                 if chunk.choices[0].delta.content:
                     yield chunk.choices[0].delta.content
         else:
+            usage = response.usage
+            if usage:
+                logger.info(
+                    "Token usage: prompt=%d, completion=%d, total=%d",
+                    usage.prompt_tokens,
+                    usage.completion_tokens,
+                    usage.total_tokens,
+                )
             yield response.choices[0].message.content
 
     async def generate_sql(self, request: SQLGenerationRequest) -> Dict[str, Any]:
@@ -194,6 +207,12 @@ Return ONLY the SQL query without any explanation or markdown formatting."""
             Dictionary with analysis results and insights
         """
         # Convert data to DataFrame for analysis
+        if len(request.data) > MAX_DATA_ROWS:
+            raise ValueError(
+                f"Data exceeds maximum allowed rows ({MAX_DATA_ROWS}). "
+                f"Please reduce dataset size."
+            )
+
         df = pd.DataFrame(request.data)
 
         # Generate basic statistics
@@ -321,11 +340,14 @@ Format your response in clear sections with headers. Be specific and reference a
 
 # Singleton instance
 _openai_service: Optional[OpenAIService] = None
+_openai_lock = asyncio.Lock()
 
 
 async def get_openai_service() -> OpenAIService:
-    """Get or create OpenAI service singleton"""
+    """Get or create OpenAI service singleton (thread-safe)"""
     global _openai_service
     if _openai_service is None:
-        _openai_service = OpenAIService()
+        async with _openai_lock:
+            if _openai_service is None:
+                _openai_service = OpenAIService()
     return _openai_service

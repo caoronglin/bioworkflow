@@ -6,9 +6,10 @@ from uuid import uuid4
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
-from sqlalchemy import desc, select
+from sqlalchemy import desc, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from backend.auth.jwt import get_current_user_id
 from backend.core.database import get_db
 from backend.models.pipeline import ExecutionStatus, Pipeline, PipelineExecution, PipelineStatus
 from backend.services.pipeline.service import PipelineService
@@ -94,7 +95,7 @@ async def list_pipelines(
 @router.post("/", response_model=PipelineResponse)
 async def create_pipeline(
     config: PipelineConfig,
-    owner_id: str = "system",  # TODO: 从认证信息中获取
+    owner_id: str = Depends(get_current_user_id),
     db: AsyncSession = Depends(get_db),
 ):
     """
@@ -193,6 +194,7 @@ async def delete_pipeline(
 async def execute_pipeline(
     pipeline_id: str,
     parameters: Optional[dict] = None,
+    user_id: str = Depends(get_current_user_id),
     service: PipelineService = Depends(get_pipeline_service),
 ):
     """
@@ -211,7 +213,7 @@ async def execute_pipeline(
     try:
         result = await service.execute(
             pipeline_id=pipeline_id,
-            triggered_by="system",  # TODO: 从认证信息中获取
+            triggered_by=user_id,
             parameters=parameters,
         )
 
@@ -253,11 +255,11 @@ async def list_executions(
     result = await db.execute(query)
     executions = result.scalars().all()
 
-    # 查询总数
+    # 查询总数（使用 COUNT 而非加载全部记录）
     count_result = await db.execute(
-        select(PipelineExecution).where(PipelineExecution.pipeline_id == pipeline_id)
+        select(func.count()).select_from(PipelineExecution).where(PipelineExecution.pipeline_id == pipeline_id)
     )
-    total = len(count_result.scalars().all())
+    total = count_result.scalar() or 0
 
     return ExecutionListResponse(
         executions=[

@@ -127,64 +127,8 @@ class CacheControlMiddleware(BaseHTTPMiddleware):
         return response
 
 
-class CompressionMiddleware(BaseHTTPMiddleware):
-    """
-    响应压缩中间件
-
-    压缩大响应体
-    """
-
-    def __init__(
-        self,
-        app: ASGIApp,
-        minimum_size: int = 1000,
-        compression_level: int = 6,
-    ):
-        super().__init__(app)
-        self.minimum_size = minimum_size
-        self.compression_level = compression_level
-
-    async def dispatch(self, request: Request, call_next: Callable) -> Response:
-        response = await call_next(request)
-
-        # 检查是否应该压缩
-        if "gzip" not in request.headers.get("Accept-Encoding", ""):
-            return response
-
-        if response.headers.get("Content-Encoding"):
-            return response
-
-        # 获取响应体
-        body = b""
-        async for chunk in response.body_iterator:
-            body += chunk
-
-        # 如果响应太小，不压缩
-        if len(body) < self.minimum_size:
-            return Response(
-                content=body,
-                status_code=response.status_code,
-                headers=dict(response.headers),
-                media_type=response.media_type,
-            )
-
-        # 压缩响应
-        import gzip
-
-        compressed = gzip.compress(body, compresslevel=self.compression_level)
-
-        headers = dict(response.headers)
-        headers["Content-Encoding"] = "gzip"
-        headers["Content-Length"] = str(len(compressed))
-        headers["Vary"] = "Accept-Encoding"
-
-        return Response(
-            content=compressed,
-            status_code=response.status_code,
-            headers=headers,
-            media_type=response.media_type,
-        )
-
+# CompressionMiddleware 已移除 —— 使用 FastAPI 内置的 GZipMiddleware 替代
+# 原始实现将整个响应体加载到内存中，存在内存风险
 
 class DatabaseQueryOptimizer:
     """

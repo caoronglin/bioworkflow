@@ -5,7 +5,7 @@ Redis 缓存服务实现
 """
 
 import json
-import pickle
+# pickle removed — using JSON for safe serialization
 from typing import Any
 
 import redis.asyncio as redis
@@ -28,7 +28,7 @@ class RedisCacheService(CacheService):
             self._redis = redis.from_url(
                 settings.REDIS_URL,
                 encoding="utf-8",
-                decode_responses=False,
+                decode_responses=True,
             )
         return self._redis
 
@@ -39,7 +39,7 @@ class RedisCacheService(CacheService):
             data = await r.get(key)
             if data is None:
                 return None
-            return pickle.loads(data)
+            return json.loads(data)
         except Exception as e:
             logger.error(f"Cache get error: {e}")
             return None
@@ -53,7 +53,7 @@ class RedisCacheService(CacheService):
         """设置缓存值"""
         try:
             r = await self._get_redis()
-            data = pickle.dumps(value)
+            data = json.dumps(value, default=str)
             await r.setex(key, ttl or self._default_ttl, data)
         except Exception as e:
             logger.error(f"Cache set error: {e}")
