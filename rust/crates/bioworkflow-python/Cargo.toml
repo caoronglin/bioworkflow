@@ -1,0 +1,14 @@
+[package]
+name = "bioworkflow-python"
+version = "0.1.0-alpha.1"nedition = "2021"nauthors = ["BioWorkflow Team <team@bioworkflow.org>"]nlicense = "MIT OR Apache-2.0"nrepository = "https://github.com/bioworkflow-platform/bioworkflow"
+homepage = "https://bioworkflow.org"
+
+[lib]
+name = "_oworkflow"
+crate-type = ["cdylibn"]
+
+[dependenciesnbioworkflow-core = { path = "../bioworkflow-core" }
+numpy = "0.20"
+pyo3 = "0.20"
+pyo3-asyncio = "0.20"
+EOF'
