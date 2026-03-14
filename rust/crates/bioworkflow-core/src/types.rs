@@ -1,257 +1,352 @@
-//! 核心数据类型定义
+//! 核心类型定义
+//!
+//! 定义BioWorkflow中使用的所有核心数据结构
+
+use std::collections::HashMap;
+use std::path::PathBuf;
 
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
-use std::fmt;
-use std::path::PathBuf;
-use std::time::{Duration, SystemTime};
 
-/// 工作流 ID
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
-pub struct WorkflowId(pub uuid::Uuid);
+/// 工作流标识符
+pub type WorkflowId = String;
 
-impl WorkflowId {
-    /// 生成新的工作流 ID
-    pub fn new() -> Self {
-        Self(uuid::Uuid::new_v4())
-    }
-}
+/// 任务标识符
+pub type TaskId = String;
 
-impl Default for WorkflowId {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
-impl fmt::Display for WorkflowId {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self.0)
-    }
-}
-
-/// 任务 ID
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
-pub struct TaskId(pub uuid::Uuid);
-
-impl TaskId {
-    pub fn new() -> Self {
-        Self(uuid::Uuid::new_v4())
-    }
-}
-
-impl Default for TaskId {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
-/// 执行 ID
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
-pub struct ExecutionId(pub uuid::Uuid);
-
-impl ExecutionId {
-    pub fn new() -> Self {
-        Self(uuid::Uuid::new_v4())
-    }
-}
-
-impl Default for ExecutionId {
-    fn default() -> Self {
-        Self::new()
-    }
-}
+/// 节点标识符
+pub type NodeId = String;
 
 /// 工作流定义
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct Workflow {
-    /// 工作流 ID
+    /// 工作流ID
     pub id: WorkflowId,
     /// 工作流名称
     pub name: String,
-    /// 描述
-    pub description: Option<String>,
-    /// Snakemake 文件路径
-    pub snakefile: PathBuf,
-    /// 配置文件
-    pub config: HashMap<String, serde_json::Value>,
-    /// 环境变量
-    pub env_vars: HashMap<String, String>,
-    /// 创建时间
-    pub created_at: SystemTime,
-    /// 更新时间
-    pub updated_at: SystemTime,
-    /// 标签
-    pub tags: Vec<String>,
+    /// 工作流描述
+    pub description: String,
+    /// 工作流版本
+    pub version: String,
+    /// 节点列表
+    pub nodes: Vec<Node>,
+    /// 边列表
+    pub edges: Vec<Edge>,
+    /// 配置参数
+    pub config: WorkflowConfig,
+    /// 元数据
+    #[serde(default)]
+    pub metadata: HashMap<String, String>,
+}
+
+impl Workflow {
+    /// 创建新的工作流
+    pub fn new(id: impl Into<String>, name: impl Into<String>) -> Self {
+        Self {
+            id: id.into(),
+            name: name.into(),
+            description: String::new(),
+            version: "1.0.0".to_string(),
+            nodes: Vec::new(),
+            edges: Vec::new(),
+            config: WorkflowConfig::default(),
+            metadata: HashMap::new(),
+        }
+    }
+
+    /// 添加节点
+    pub fn add_node(&mut self, node: Node) -> &mut Self {
+        self.nodes.push(node);
+        self
+    }
+
+    /// 添加边
+    pub fn add_edge(&mut self, edge: Edge) -> &mut Self {
+        self.edges.push(edge);
+        self
+    }
+
+    /// 查找节点
+    pub fn find_node(&self, id: &str) -> Option<&Node> {
+        self.nodes.iter().find(|n| n.id == id)
+    }
+}
+
+/// 节点定义
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct Node {
+    /// 节点ID
+    pub id: NodeId,
+    /// 节点类型
+    pub node_type: NodeType,
+    /// 节点标签
+    pub label: String,
+    /// 节点位置（用于可视化）
+    pub position: Option<Position>,
+    /// 节点数据
+    #[serde(default)]
+    pub data: HashMap<String, serde_json::Value>,
+}
+
+impl Node {
+    /// 创建新节点
+    pub fn new(id: impl Into<String>, node_type: NodeType, label: impl Into<String>) -> Self {
+        Self {
+            id: id.into(),
+            node_type,
+            label: label.into(),
+            position: None,
+            data: HashMap::new(),
+        }
+    }
+}
+
+/// 节点类型
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
+#[serde(rename_all = "snake_case")]
+pub enum NodeType {
+    /// 输入节点
+    Input,
+    /// 输出节点
+    Output,
+    /// 处理节点
+    Process,
+    /// 决策节点
+    Decision,
+    /// 并行节点
+    Parallel,
+    /// 合并节点
+    Merge,
+    /// 自定义节点
+    Custom(String),
+}
+
+/// 边定义
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct Edge {
+    /// 边ID
+    pub id: String,
+    /// 源节点ID
+    pub source: NodeId,
+    /// 目标节点ID
+    pub target: NodeId,
+    /// 边标签
+    #[serde(default)]
+    pub label: String,
+    /// 条件（用于决策边）
+    #[serde(default)]
+    pub condition: Option<String>,
+}
+
+impl Edge {
+    /// 创建新边
+    pub fn new(
+        id: impl Into<String>,
+        source: impl Into<String>,
+        target: impl Into<String>,
+    ) -> Self {
+        Self {
+            id: id.into(),
+            source: source.into(),
+            target: target.into(),
+            label: String::new(),
+            condition: None,
+        }
+    }
+}
+
+/// 位置（用于可视化）
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq)]
+pub struct Position {
+    pub x: f64,
+    pub y: f64,
+}
+
+impl Position {
+    pub fn new(x: f64, y: f64) -> Self {
+        Self { x, y }
+    }
+}
+
+/// 工作流配置
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct WorkflowConfig {
+    /// 工作目录
+    pub workdir: PathBuf,
+    /// 最大并行度
+    pub max_parallel: usize,
+    /// 重试次数
+    pub retries: u32,
+    /// 超时时间（秒）
+    pub timeout: u64,
+    /// 资源限制
+    pub resources: ResourceLimits,
+    /// 调度策略
+    pub scheduling: SchedulingPolicy,
+}
+
+impl Default for WorkflowConfig {
+    fn default() -> Self {
+        Self {
+            workdir: PathBuf::from("./workflow"),
+            max_parallel: 4,
+            retries: 3,
+            timeout: 3600,
+            resources: ResourceLimits::default(),
+            scheduling: SchedulingPolicy::default(),
+        }
+    }
+}
+
+/// 资源限制
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct ResourceLimits {
+    /// CPU核心数
+    pub cpu_cores: usize,
+    /// 内存限制（MB）
+    pub memory_mb: usize,
+    /// 磁盘空间（MB）
+    pub disk_mb: usize,
+    /// GPU数量
+    pub gpu_count: usize,
+}
+
+impl Default for ResourceLimits {
+    fn default() -> Self {
+        Self {
+            cpu_cores: 4,
+            memory_mb: 8192,
+            disk_mb: 102400,
+            gpu_count: 0,
+        }
+    }
+}
+
+/// 调度策略
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
+#[serde(rename_all = "snake_case")]
+pub enum SchedulingPolicy {
+    /// 先进先出
+    Fifo,
+    /// 优先级调度
+    Priority,
+    /// 最短作业优先
+    ShortestJobFirst,
+    /// 公平共享
+    FairShare,
+    /// 最早截止时间优先
+    EarliestDeadlineFirst,
+}
+
+impl Default for SchedulingPolicy {
+    fn default() -> Self {
+        Self::Fifo
+    }
 }
 
 /// 任务定义
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct Task {
-    /// 任务 ID
+    /// 任务ID
     pub id: TaskId,
-    /// 所属工作流
-    pub workflow_id: WorkflowId,
     /// 任务名称
     pub name: String,
-    /// 命令
-    pub command: String,
+    /// 任务描述
+    pub description: String,
     /// 输入文件
     pub inputs: Vec<PathBuf>,
     /// 输出文件
     pub outputs: Vec<PathBuf>,
-    /// 依赖的任务 ID
-    pub dependencies: Vec<TaskId>,
+    /// 执行命令
+    pub command: String,
     /// 资源需求
     pub resources: ResourceRequirements,
-    /// 容器镜像 (可选)
-    pub container: Option<String>,
-    /// 环境名称
-    pub environment: Option<String>,
+    /// 依赖任务
+    pub dependencies: Vec<TaskId>,
+    /// 优先级
+    pub priority: i32,
+    /// 重试次数
+    pub retries: u32,
 }
 
 /// 资源需求
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct ResourceRequirements {
-    /// CPU 核心数
-    pub cpu: Option<f64>,
-    /// 内存 (MB)
-    pub memory: Option<u64>,
-    /// GPU 数量
-    pub gpu: Option<u32>,
-    /// 磁盘空间 (MB)
-    pub disk: Option<u64>,
-    /// 临时目录大小
-    pub tmpdir: Option<u64>,
-    /// 自定义资源
-    pub custom: HashMap<String, serde_json::Value>,
+    /// CPU核心数
+    pub cpu_cores: usize,
+    /// 内存需求（MB）
+    pub memory_mb: usize,
+    /// 磁盘需求（MB）
+    pub disk_mb: usize,
+    /// 运行时间估计（秒）
+    pub estimated_runtime: u64,
 }
 
 impl Default for ResourceRequirements {
     fn default() -> Self {
         Self {
-            cpu: Some(1.0),
-            memory: Some(1024),
-            gpu: None,
-            disk: None,
-            tmpdir: None,
-            custom: HashMap::new(),
+            cpu_cores: 1,
+            memory_mb: 512,
+            disk_mb: 1024,
+            estimated_runtime: 300,
         }
     }
 }
 
-/// 执行状态
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-pub enum ExecutionStatus {
+/// 任务状态
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, Hash)]
+#[serde(rename_all = "snake_case")]
+pub enum TaskState {
     /// 等待中
-    #[serde(rename = "pending")]
     Pending,
+    /// 已调度
+    Scheduled,
     /// 运行中
-    #[serde(rename = "running")]
     Running,
     /// 已完成
-    #[serde(rename = "completed")]
     Completed,
     /// 失败
-    #[serde(rename = "failed")]
     Failed,
     /// 已取消
-    #[serde(rename = "cancelled")]
     Cancelled,
-    /// 暂停
-    #[serde(rename = "paused")]
-    Paused,
+    /// 已跳过
+    Skipped,
 }
 
-impl fmt::Display for ExecutionStatus {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            ExecutionStatus::Pending => write!(f, "pending"),
-            ExecutionStatus::Running => write!(f, "running"),
-            ExecutionStatus::Completed => write!(f, "completed"),
-            ExecutionStatus::Failed => write!(f, "failed"),
-            ExecutionStatus::Cancelled => write!(f, "cancelled"),
-            ExecutionStatus::Paused => write!(f, "paused"),
-        }
-    }
-}
-
-/// 执行记录
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct Execution {
-    /// 执行 ID
-    pub id: ExecutionId,
-    /// 工作流 ID
-    pub workflow_id: WorkflowId,
-    /// 状态
-    pub status: ExecutionStatus,
-    /// 开始时间
-    pub started_at: Option<SystemTime>,
-    /// 结束时间
-    pub ended_at: Option<SystemTime>,
-    /// 任务执行记录
-    pub task_executions: Vec<TaskExecution>,
-    /// 输出路径
-    pub output_dir: PathBuf,
-    /// 日志路径
-    pub log_path: Option<PathBuf>,
-    /// 错误信息
-    pub error_message: Option<String>,
-    /// 资源使用情况
-    pub resource_usage: Option<ResourceUsage>,
-}
-
-/// 任务执行记录
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct TaskExecution {
-    /// 任务 ID
+/// 任务执行结果
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct TaskExecutionResult {
+    /// 任务ID
     pub task_id: TaskId,
-    /// 状态
-    pub status: ExecutionStatus,
+    /// 最终状态
+    pub state: TaskState,
     /// 开始时间
-    pub started_at: Option<SystemTime>,
+    pub started_at: Option<datetime>,
     /// 结束时间
-    pub ended_at: Option<SystemTime>,
+    pub completed_at: Option<datetime>,
     /// 退出码
     pub exit_code: Option<i32>,
     /// 标准输出
-    pub stdout: Option<String>,
+    pub stdout: String,
     /// 标准错误
-    pub stderr: Option<String>,
-    /// 资源使用
-    pub resource_usage: Option<ResourceUsage>,
+    pub stderr: String,
+    /// 错误信息
+    pub error_message: Option<String>,
+    /// 资源使用统计
+    pub resource_usage: ResourceUsage,
 }
 
 /// 资源使用统计
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq)]
 pub struct ResourceUsage {
-    /// CPU 时间 (秒)
-    pub cpu_time: f64,
-    /// 最大内存使用 (MB)
-    pub max_memory: u64,
-    /// 平均内存使用 (MB)
-    pub avg_memory: u64,
-    /// 磁盘读取 (MB)
-    pub disk_read: u64,
-    /// 磁盘写入 (MB)
-    pub disk_write: u64,
-    /// GPU 使用统计
-    pub gpu_usage: Option<GpuUsage>,
+    /// CPU使用时间（秒）
+    pub cpu_time_seconds: f64,
+    /// 峰值内存使用（MB）
+    pub peak_memory_mb: usize,
+    /// 磁盘读取（MB）
+    pub disk_read_mb: usize,
+    /// 磁盘写入（MB）
+    pub disk_write_mb: usize,
 }
 
-/// GPU 使用统计
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct GpuUsage {
-    /// GPU 索引
-    pub gpu_index: u32,
-    /// GPU 名称
-    pub gpu_name: String,
-    /// GPU 利用率 (%)
-    pub utilization: f32,
-    /// 显存使用 (MB)
-    pub memory_used: u64,
-    /// 显存总量 (MB)
-    pub memory_total: u64,
-}
-
-// Re-export uuid for convenience
-pub use uuid;
+// Re-exports for convenience
+pub use crate::error::{BioWorkflowError, Result};
