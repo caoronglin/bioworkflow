@@ -41,3 +41,4 @@ pyo3-asyncio = { workspace = true, optional = true }
 tempfile = { workspace = true }
 mockall = { workspace = true }
 tokio-test = "0.4"
+num_cpus = "1.0"
