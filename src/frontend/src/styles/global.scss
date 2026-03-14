@@ -1,0 +1,942 @@
+/**
+ * BioWorkflow Global Styles
+ * 
+ * 全局样式重置、工具类和基础样式
+ * 
+ * @version 2.0.0
+ * @author BioWorkflow Team
+ */
+
+@import './variables.scss';
+
+// ============================================================================
+// CSS Reset - 基于 modern-normalize
+// ============================================================================
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  line-height: 1.15;
+  -webkit-text-size-adjust: 100%;
+  -moz-tab-size: 4;
+  tab-size: 4;
+  font-family: var(--font-family-base);
+  font-size: var(--font-size-base);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  margin: 0;
+  font-family: var(--font-family-base);
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-normal);
+  line-height: var(--line-height-normal);
+  color: var(--text-color-primary);
+  background-color: var(--bg-color-page);
+  transition: background-color var(--duration-normal) var(--ease-in-out),
+              color var(--duration-normal) var(--ease-in-out);
+}
+
+hr {
+  height: 0;
+  color: inherit;
+  border-top-width: 1px;
+}
+
+abbr:where([title]) {
+  text-decoration: underline dotted;
+}
+
+b,
+strong {
+  font-weight: var(--font-weight-bold);
+}
+
+code,
+kbd,
+samp,
+pre {
+  font-family: var(--font-family-mono);
+  font-size: 1em;
+}
+
+small {
+  font-size: 80%;
+}
+
+sub,
+sup {
+  font-size: 75%;
+  line-height: 0;
+  position: relative;
+  vertical-align: baseline;
+}
+
+sub {
+  bottom: -0.25em;
+}
+
+sup {
+  top: -0.5em;
+}
+
+table {
+  text-indent: 0;
+  border-color: inherit;
+  border-collapse: collapse;
+}
+
+button,
+input,
+optgroup,
+select,
+textarea {
+  font-family: inherit;
+  font-size: 100%;
+  line-height: inherit;
+  margin: 0;
+}
+
+button,
+select {
+  text-transform: none;
+}
+
+button,
+[type='button'],
+[type='reset'],
+[type='submit'] {
+  -webkit-appearance: button;
+}
+
+::-moz-focus-inner {
+  border-style: none;
+  padding: 0;
+}
+
+:-moz-focusring {
+  outline: 1px dotted ButtonText;
+}
+
+:-moz-ui-invalid {
+  box-shadow: none;
+}
+
+legend {
+  padding: 0;
+}
+
+progress {
+  vertical-align: baseline;
+}
+
+::-webkit-inner-spin-button,
+::-webkit-outer-spin-button {
+  height: auto;
+}
+
+[type='search'] {
+  -webkit-appearance: textfield;
+  outline-offset: -2px;
+}
+
+::-webkit-search-decoration {
+  -webkit-appearance: none;
+}
+
+::-webkit-file-upload-button {
+  -webkit-appearance: button;
+  font: inherit;
+}
+
+summary {
+  display: list-item;
+}
+
+// ============================================================================
+// 基础元素样式
+// ============================================================================
+
+h1, h2, h3, h4, h5, h6 {
+  font-weight: var(--font-weight-semibold);
+  line-height: var(--line-height-tight);
+  color: var(--text-color-primary);
+  margin-bottom: var(--spacing-md);
+}
+
+h1 {
+  font-size: var(--font-size-4xl);
+  font-weight: var(--font-weight-bold);
+}
+
+h2 {
+  font-size: var(--font-size-3xl);
+}
+
+h3 {
+  font-size: var(--font-size-2xl);
+}
+
+h4 {
+  font-size: var(--font-size-xl);
+}
+
+h5 {
+  font-size: var(--font-size-lg);
+}
+
+h6 {
+  font-size: var(--font-size-md);
+}
+
+p {
+  margin-bottom: var(--spacing-md);
+  line-height: var(--line-height-relaxed);
+}
+
+a {
+  color: var(--color-primary);
+  text-decoration: none;
+  transition: color var(--duration-fast) var(--ease-in-out);
+
+  &:hover {
+    color: var(--color-primary-light-3);
+  }
+
+  &:active {
+    color: var(--color-primary-dark-2);
+  }
+}
+
+img,
+picture,
+video,
+canvas,
+svg {
+  display: block;
+  max-width: 100%;
+}
+
+input,
+button,
+textarea,
+select {
+  font: inherit;
+}
+
+ul, ol {
+  list-style: none;
+  padding-left: 0;
+}
+
+dl {
+  dt {
+    font-weight: var(--font-weight-semibold);
+    margin-bottom: var(--spacing-xs);
+  }
+  
+  dd {
+    margin-left: var(--spacing-md);
+    margin-bottom: var(--spacing-md);
+  }
+}
+
+blockquote {
+  border-left: 4px solid var(--color-primary);
+  padding-left: var(--spacing-md);
+  margin: var(--spacing-md) 0;
+  color: var(--text-color-secondary);
+  font-style: italic;
+}
+
+code {
+  background-color: var(--fill-color-light);
+  padding: 2px 6px;
+  border-radius: var(--radius-sm);
+  font-family: var(--font-family-mono);
+  font-size: 0.875em;
+}
+
+pre {
+  background-color: var(--fill-color-light);
+  padding: var(--spacing-md);
+  border-radius: var(--radius-base);
+  overflow-x: auto;
+  margin: var(--spacing-md) 0;
+  
+  code {
+    background: none;
+    padding: 0;
+  }
+}
+
+// ============================================================================
+// 滚动条样式
+// ============================================================================
+
+html {
+  &::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: var(--bg-color-page);
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: var(--color-neutral-300);
+    border-radius: 5px;
+
+    &:hover {
+      background: var(--color-neutral-400);
+    }
+  }
+
+  &::-webkit-scrollbar-corner {
+    background: transparent;
+  }
+}
+
+html.dark {
+  &::-webkit-scrollbar-thumb {
+    background: var(--color-neutral-600);
+
+    &:hover {
+      background: var(--color-neutral-500);
+    }
+  }
+}
+
+// ============================================================================
+// 布局工具类
+// ============================================================================
+
+// Flexbox
+.flex {
+  display: flex;
+}
+
+.flex-inline {
+  display: inline-flex;
+}
+
+.flex-col {
+  flex-direction: column;
+}
+
+.flex-row {
+  flex-direction: row;
+}
+
+.flex-wrap {
+  flex-wrap: wrap;
+}
+
+.flex-nowrap {
+  flex-wrap: nowrap;
+}
+
+.flex-1 {
+  flex: 1 1 0%;
+}
+
+.flex-auto {
+  flex: 1 1 auto;
+}
+
+.flex-none {
+  flex: none;
+}
+
+// Flex 对齐
+.items-start {
+  align-items: flex-start;
+}
+
+.items-end {
+  align-items: flex-end;
+}
+
+.items-center {
+  align-items: center;
+}
+
+.items-baseline {
+  align-items: baseline;
+}
+
+.items-stretch {
+  align-items: stretch;
+}
+
+.justify-start {
+  justify-content: flex-start;
+}
+
+.justify-end {
+  justify-content: flex-end;
+}
+
+.justify-center {
+  justify-content: center;
+}
+
+.justify-between {
+  justify-content: space-between;
+}
+
+.justify-around {
+  justify-content: space-around;
+}
+
+.justify-evenly {
+  justify-content: space-evenly;
+}
+
+// Grid
+.grid {
+  display: grid;
+}
+
+.grid-cols-1 {
+  grid-template-columns: repeat(1, minmax(0, 1fr));
+}
+
+.grid-cols-2 {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.grid-cols-3 {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.grid-cols-4 {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.gap-1 {
+  gap: var(--spacing-xs);
+}
+
+.gap-2 {
+  gap: var(--spacing-sm);
+}
+
+.gap-3 {
+  gap: var(--spacing-md);
+}
+
+.gap-4 {
+  gap: var(--spacing-lg);
+}
+
+.gap-6 {
+  gap: var(--spacing-xl);
+}
+
+.gap-8 {
+  gap: var(--spacing-2xl);
+}
+
+// ============================================================================
+// 间距工具类
+// ============================================================================
+
+// Margin
+.m-0 { margin: 0; }
+.m-1 { margin: var(--spacing-xs); }
+.m-2 { margin: var(--spacing-sm); }
+.m-3 { margin: var(--spacing-md); }
+.m-4 { margin: var(--spacing-lg); }
+.m-6 { margin: var(--spacing-xl); }
+.m-8 { margin: var(--spacing-2xl); }
+.m-auto { margin: auto; }
+
+.mx-0 { margin-left: 0; margin-right: 0; }
+.mx-1 { margin-left: var(--spacing-xs); margin-right: var(--spacing-xs); }
+.mx-2 { margin-left: var(--spacing-sm); margin-right: var(--spacing-sm); }
+.mx-3 { margin-left: var(--spacing-md); margin-right: var(--spacing-md); }
+.mx-4 { margin-left: var(--spacing-lg); margin-right: var(--spacing-lg); }
+.mx-auto { margin-left: auto; margin-right: auto; }
+
+.my-0 { margin-top: 0; margin-bottom: 0; }
+.my-1 { margin-top: var(--spacing-xs); margin-bottom: var(--spacing-xs); }
+.my-2 { margin-top: var(--spacing-sm); margin-bottom: var(--spacing-sm); }
+.my-3 { margin-top: var(--spacing-md); margin-bottom: var(--spacing-md); }
+.my-4 { margin-top: var(--spacing-lg); margin-bottom: var(--spacing-lg); }
+
+.mt-0 { margin-top: 0; }
+.mt-1 { margin-top: var(--spacing-xs); }
+.mt-2 { margin-top: var(--spacing-sm); }
+.mt-3 { margin-top: var(--spacing-md); }
+.mt-4 { margin-top: var(--spacing-lg); }
+.mt-6 { margin-top: var(--spacing-xl); }
+.mt-8 { margin-top: var(--spacing-2xl); }
+.mt-auto { margin-top: auto; }
+
+.mr-0 { margin-right: 0; }
+.mr-1 { margin-right: var(--spacing-xs); }
+.mr-2 { margin-right: var(--spacing-sm); }
+.mr-3 { margin-right: var(--spacing-md); }
+.mr-4 { margin-right: var(--spacing-lg); }
+.mr-auto { margin-right: auto; }
+
+.mb-0 { margin-bottom: 0; }
+.mb-1 { margin-bottom: var(--spacing-xs); }
+.mb-2 { margin-bottom: var(--spacing-sm); }
+.mb-3 { margin-bottom: var(--spacing-md); }
+.mb-4 { margin-bottom: var(--spacing-lg); }
+.mb-6 { margin-bottom: var(--spacing-xl); }
+.mb-8 { margin-bottom: var(--spacing-2xl); }
+.mb-auto { margin-bottom: auto; }
+
+.ml-0 { margin-left: 0; }
+.ml-1 { margin-left: var(--spacing-xs); }
+.ml-2 { margin-left: var(--spacing-sm); }
+.ml-3 { margin-left: var(--spacing-md); }
+.ml-4 { margin-left: var(--spacing-lg); }
+.ml-auto { margin-left: auto; }
+
+// Padding
+.p-0 { padding: 0; }
+.p-1 { padding: var(--spacing-xs); }
+.p-2 { padding: var(--spacing-sm); }
+.p-3 { padding: var(--spacing-md); }
+.p-4 { padding: var(--spacing-lg); }
+.p-6 { padding: var(--spacing-xl); }
+.p-8 { padding: var(--spacing-2xl); }
+
+.px-0 { padding-left: 0; padding-right: 0; }
+.px-1 { padding-left: var(--spacing-xs); padding-right: var(--spacing-xs); }
+.px-2 { padding-left: var(--spacing-sm); padding-right: var(--spacing-sm); }
+.px-3 { padding-left: var(--spacing-md); padding-right: var(--spacing-md); }
+.px-4 { padding-left: var(--spacing-lg); padding-right: var(--spacing-lg); }
+.px-6 { padding-left: var(--spacing-xl); padding-right: var(--spacing-xl); }
+
+.py-0 { padding-top: 0; padding-bottom: 0; }
+.py-1 { padding-top: var(--spacing-xs); padding-bottom: var(--spacing-xs); }
+.py-2 { padding-top: var(--spacing-sm); padding-bottom: var(--spacing-sm); }
+.py-3 { padding-top: var(--spacing-md); padding-bottom: var(--spacing-md); }
+.py-4 { padding-top: var(--spacing-lg); padding-bottom: var(--spacing-lg); }
+.py-6 { padding-top: var(--spacing-xl); padding-bottom: var(--spacing-xl); }
+
+.pt-0 { padding-top: 0; }
+.pt-1 { padding-top: var(--spacing-xs); }
+.pt-2 { padding-top: var(--spacing-sm); }
+.pt-3 { padding-top: var(--spacing-md); }
+.pt-4 { padding-top: var(--spacing-lg); }
+.pt-6 { padding-top: var(--spacing-xl); }
+
+.pr-0 { padding-right: 0; }
+.pr-1 { padding-right: var(--spacing-xs); }
+.pr-2 { padding-right: var(--spacing-sm); }
+.pr-3 { padding-right: var(--spacing-md); }
+.pr-4 { padding-right: var(--spacing-lg); }
+
+.pb-0 { padding-bottom: 0; }
+.pb-1 { padding-bottom: var(--spacing-xs); }
+.pb-2 { padding-bottom: var(--spacing-sm); }
+.pb-3 { padding-bottom: var(--spacing-md); }
+.pb-4 { padding-bottom: var(--spacing-lg); }
+.pb-6 { padding-bottom: var(--spacing-xl); }
+
+.pl-0 { padding-left: 0; }
+.pl-1 { padding-left: var(--spacing-xs); }
+.pl-2 { padding-left: var(--spacing-sm); }
+.pl-3 { padding-left: var(--spacing-md); }
+.pl-4 { padding-left: var(--spacing-lg); }
+
+// ============================================================================
+// 排版工具类
+// ============================================================================
+
+// 文字对齐
+.text-left { text-align: left; }
+.text-center { text-align: center; }
+.text-right { text-align: right; }
+.text-justify { text-align: justify; }
+
+// 字重
+.font-light { font-weight: var(--font-weight-light); }
+.font-normal { font-weight: var(--font-weight-normal); }
+.font-medium { font-weight: var(--font-weight-medium); }
+.font-semibold { font-weight: var(--font-weight-semibold); }
+.font-bold { font-weight: var(--font-weight-bold); }
+
+// 字号
+.text-xs { font-size: var(--font-size-xs); }
+.text-sm { font-size: var(--font-size-sm); }
+.text-base { font-size: var(--font-size-base); }
+.text-lg { font-size: var(--font-size-lg); }
+.text-xl { font-size: var(--font-size-xl); }
+.text-2xl { font-size: var(--font-size-2xl); }
+.text-3xl { font-size: var(--font-size-3xl); }
+.text-4xl { font-size: var(--font-size-4xl); }
+
+// 行高
+.leading-none { line-height: var(--line-height-none); }
+.leading-tight { line-height: var(--line-height-tight); }
+.leading-snug { line-height: var(--line-height-snug); }
+.leading-normal { line-height: var(--line-height-normal); }
+.leading-relaxed { line-height: var(--line-height-relaxed); }
+.leading-loose { line-height: var(--line-height-loose); }
+
+// 文字颜色
+.text-primary { color: var(--text-color-primary); }
+.text-regular { color: var(--text-color-regular); }
+.text-secondary { color: var(--text-color-secondary); }
+.text-placeholder { color: var(--text-color-placeholder); }
+.text-disabled { color: var(--text-color-disabled); }
+
+.text-success { color: var(--color-success); }
+.text-warning { color: var(--color-warning); }
+.text-danger { color: var(--color-danger); }
+.text-info { color: var(--color-info); }
+
+// 中性色
+.text-neutral-50 { color: var(--color-neutral-50); }
+.text-neutral-100 { color: var(--color-neutral-100); }
+.text-neutral-200 { color: var(--color-neutral-200); }
+.text-neutral-300 { color: var(--color-neutral-300); }
+.text-neutral-400 { color: var(--color-neutral-400); }
+.text-neutral-500 { color: var(--color-neutral-500); }
+.text-neutral-600 { color: var(--color-neutral-600); }
+.text-neutral-700 { color: var(--color-neutral-700); }
+.text-neutral-800 { color: var(--color-neutral-800); }
+.text-neutral-900 { color: var(--color-neutral-900); }
+
+// 文字装饰
+.underline { text-decoration: underline; }
+.line-through { text-decoration: line-through; }
+.no-underline { text-decoration: none; }
+
+// 文字变换
+.uppercase { text-transform: uppercase; }
+.lowercase { text-transform: lowercase; }
+.capitalize { text-transform: capitalize; }
+
+// 文字截断
+.truncate {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.text-clamp-2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.text-clamp-3 {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+// ============================================================================
+// 背景工具类
+// ============================================================================
+
+.bg-primary { background-color: var(--color-primary); }
+.bg-success { background-color: var(--color-success); }
+.bg-warning { background-color: var(--color-warning); }
+.bg-danger { background-color: var(--color-danger); }
+.bg-info { background-color: var(--color-info); }
+
+.bg-page { background-color: var(--bg-color-page); }
+.bg-base { background-color: var(--bg-color); }
+.bg-overlay { background-color: var(--bg-color-overlay); }
+.bg-light { background-color: var(--bg-color-light); }
+
+.bg-neutral-50 { background-color: var(--color-neutral-50); }
+.bg-neutral-100 { background-color: var(--color-neutral-100); }
+.bg-neutral-200 { background-color: var(--color-neutral-200); }
+.bg-neutral-300 { background-color: var(--color-neutral-300); }
+.bg-neutral-400 { background-color: var(--color-neutral-400); }
+.bg-neutral-500 { background-color: var(--color-neutral-500); }
+.bg-neutral-600 { background-color: var(--color-neutral-600); }
+.bg-neutral-700 { background-color: var(--color-neutral-700); }
+.bg-neutral-800 { background-color: var(--color-neutral-800); }
+.bg-neutral-900 { background-color: var(--color-neutral-900); }
+
+// 渐变背景
+.gradient-primary { background: var(--gradient-primary); }
+.gradient-blue { background: var(--gradient-blue); }
+.gradient-pink { background: var(--gradient-pink); }
+.gradient-cyan { background: var(--gradient-cyan); }
+.gradient-green { background: var(--gradient-green); }
+.gradient-sunset { background: var(--gradient-sunset); }
+.gradient-ocean { background: var(--gradient-ocean); }
+.gradient-fire { background: var(--gradient-fire); }
+
+// ============================================================================
+// 圆角工具类
+// ============================================================================
+
+.rounded-none { border-radius: var(--radius-none); }
+.rounded-sm { border-radius: var(--radius-sm); }
+.rounded { border-radius: var(--radius-base); }
+.rounded-md { border-radius: var(--radius-md); }
+.rounded-lg { border-radius: var(--radius-lg); }
+.rounded-xl { border-radius: var(--radius-xl); }
+.rounded-2xl { border-radius: var(--radius-2xl); }
+.rounded-3xl { border-radius: var(--radius-3xl); }
+.rounded-full { border-radius: var(--radius-full); }
+
+.rounded-t-none { border-top-left-radius: var(--radius-none); border-top-right-radius: var(--radius-none); }
+.rounded-t { border-top-left-radius: var(--radius-base); border-top-right-radius: var(--radius-base); }
+.rounded-t-lg { border-top-left-radius: var(--radius-lg); border-top-right-radius: var(--radius-lg); }
+
+.rounded-b-none { border-bottom-left-radius: var(--radius-none); border-bottom-right-radius: var(--radius-none); }
+.rounded-b { border-bottom-left-radius: var(--radius-base); border-bottom-right-radius: var(--radius-base); }
+.rounded-b-lg { border-bottom-left-radius: var(--radius-lg); border-bottom-right-radius: var(--radius-lg); }
+
+// ============================================================================
+// 阴影工具类
+// ============================================================================
+
+.shadow-xs { box-shadow: var(--shadow-xs); }
+.shadow-sm { box-shadow: var(--shadow-sm); }
+.shadow { box-shadow: var(--shadow-base); }
+.shadow-md { box-shadow: var(--shadow-md); }
+.shadow-lg { box-shadow: var(--shadow-lg); }
+.shadow-xl { box-shadow: var(--shadow-xl); }
+.shadow-2xl { box-shadow: var(--shadow-2xl); }
+.shadow-inner { box-shadow: var(--shadow-inner); }
+
+.shadow-primary { box-shadow: var(--shadow-primary); }
+.shadow-success { box-shadow: var(--shadow-success); }
+.shadow-warning { box-shadow: var(--shadow-warning); }
+.shadow-danger { box-shadow: var(--shadow-danger); }
+
+.shadow-none { box-shadow: none; }
+
+// ============================================================================
+// 边框工具类
+// ============================================================================
+
+.border { border-width: 1px; border-style: solid; border-color: var(--border-color); }
+.border-0 { border-width: 0; }
+.border-2 { border-width: 2px; }
+.border-4 { border-width: 4px; }
+
+.border-t { border-top-width: 1px; border-style: solid; border-color: var(--border-color); }
+.border-r { border-right-width: 1px; border-style: solid; border-color: var(--border-color); }
+.border-b { border-bottom-width: 1px; border-style: solid; border-color: var(--border-color); }
+.border-l { border-left-width: 1px; border-style: solid; border-color: var(--border-color); }
+
+.border-primary { border-color: var(--color-primary); }
+.border-success { border-color: var(--color-success); }
+.border-warning { border-color: var(--color-warning); }
+.border-danger { border-color: var(--color-danger); }
+.border-info { border-color: var(--color-info); }
+
+.border-neutral-200 { border-color: var(--color-neutral-200); }
+.border-neutral-300 { border-color: var(--color-neutral-300); }
+.border-neutral-400 { border-color: var(--color-neutral-400); }
+
+// ============================================================================
+// 尺寸工具类
+// ============================================================================
+
+.w-auto { width: auto; }
+.w-full { width: 100%; }
+.w-screen { width: 100vw; }
+.w-min { width: min-content; }
+.w-max { width: max-content; }
+.w-fit { width: fit-content; }
+
+.h-auto { height: auto; }
+.h-full { height: 100%; }
+.h-screen { height: 100vh; }
+.h-min { height: min-content; }
+.h-max { height: max-content; }
+.h-fit { height: fit-content; }
+
+.min-w-0 { min-width: 0; }
+.min-w-full { min-width: 100%; }
+.min-h-0 { min-height: 0; }
+.min-h-full { min-height: 100%; }
+
+.max-w-full { max-width: 100%; }
+.max-h-full { max-height: 100%; }
+
+// ============================================================================
+// 显示/可见性
+// ============================================================================
+
+.hidden { display: none; }
+.block { display: block; }
+.inline-block { display: inline-block; }
+.inline { display: inline; }
+.flex { display: flex; }
+.inline-flex { display: inline-flex; }
+.grid { display: grid; }
+
+.visible { visibility: visible; }
+.invisible { visibility: hidden; }
+
+.overflow-auto { overflow: auto; }
+.overflow-hidden { overflow: hidden; }
+.overflow-visible { overflow: visible; }
+.overflow-scroll { overflow: scroll; }
+
+.overflow-x-auto { overflow-x: auto; }
+.overflow-y-auto { overflow-y: auto; }
+.overflow-x-hidden { overflow-x: hidden; }
+.overflow-y-hidden { overflow-y: hidden; }
+
+// ============================================================================
+// 定位工具类
+// ============================================================================
+
+.relative { position: relative; }
+.absolute { position: absolute; }
+.fixed { position: fixed; }
+.sticky { position: sticky; }
+
+.inset-0 { top: 0; right: 0; bottom: 0; left: 0; }
+.inset-x-0 { left: 0; right: 0; }
+.inset-y-0 { top: 0; bottom: 0; }
+
+.top-0 { top: 0; }
+.right-0 { right: 0; }
+.bottom-0 { bottom: 0; }
+.left-0 { left: 0; }
+
+.z-0 { z-index: 0; }
+.z-10 { z-index: 10; }
+.z-20 { z-index: 20; }
+.z-30 { z-index: 30; }
+.z-40 { z-index: 40; }
+.z-50 { z-index: 50; }
+.z-auto { z-index: auto; }
+
+// ============================================================================
+// 光标工具类
+// ============================================================================
+
+.cursor-auto { cursor: auto; }
+.cursor-default { cursor: default; }
+.cursor-pointer { cursor: pointer; }
+.cursor-wait { cursor: wait; }
+.cursor-text { cursor: text; }
+.cursor-move { cursor: move; }
+.cursor-not-allowed { cursor: not-allowed; }
+.cursor-zoom-in { cursor: zoom-in; }
+.cursor-zoom-out { cursor: zoom-out; }
+
+// ============================================================================
+// 过渡动画工具类
+// ============================================================================
+
+.transition { transition: all var(--duration-normal) var(--ease-in-out); }
+.transition-all { transition: all var(--duration-normal) var(--ease-in-out); }
+.transition-colors { transition: color, background-color, border-color var(--duration-normal) var(--ease-in-out); }
+.transition-opacity { transition: opacity var(--duration-normal) var(--ease-in-out); }
+.transition-transform { transition: transform var(--duration-normal) var(--ease-in-out); }
+
+.duration-instant { transition-duration: var(--duration-instant); }
+.duration-fast { transition-duration: var(--duration-fast); }
+.duration-normal { transition-duration: var(--duration-normal); }
+.duration-slow { transition-duration: var(--duration-slow); }
+.duration-slower { transition-duration: var(--duration-slower); }
+
+.ease-linear { transition-timing-function: var(--ease-linear); }
+.ease-in { transition-timing-function: var(--ease-in); }
+.ease-out { transition-timing-function: var(--ease-out); }
+.ease-in-out { transition-timing-function: var(--ease-in-out); }
+
+// ============================================================================
+// 动画工具类
+// ============================================================================
+
+.animate-fade-in { animation: fadeIn var(--duration-normal) var(--ease-in-out); }
+.animate-fade-out { animation: fadeOut var(--duration-normal) var(--ease-in-out); }
+.animate-slide-up { animation: slideUp var(--duration-slow) var(--ease-out); }
+.animate-slide-down { animation: slideDown var(--duration-slow) var(--ease-out); }
+.animate-slide-in-right { animation: slideInRight var(--duration-slow) var(--ease-out); }
+.animate-slide-in-left { animation: slideInLeft var(--duration-slow) var(--ease-out); }
+.animate-scale-in { animation: scaleIn var(--duration-normal) var(--ease-out); }
+.animate-spin { animation: spin 1s linear infinite; }
+.animate-pulse { animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
+.animate-bounce { animation: bounce 1s ease-in-out infinite; }
+
+// ============================================================================
+// 响应式断点
+// ============================================================================
+
+@media (max-width: --breakpoint-sm) {
+  .sm\\:hidden { display: none; }
+  .sm\\:block { display: block; }
+  .sm\\:flex { display: flex; }
+  .sm\\:grid { display: grid; }
+}
+
+@media (min-width: --breakpoint-sm) {
+  .sm\\:block { display: block; }
+  .sm\\:flex { display: flex; }
+  .sm\\:grid { display: grid; }
+  .sm\\:grid-cols-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (min-width: --breakpoint-md) {
+  .md\\:hidden { display: none; }
+  .md\\:block { display: block; }
+  .md\\:flex { display: flex; }
+  .md\\:grid { display: grid; }
+  .md\\:grid-cols-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+
+@media (min-width: --breakpoint-lg) {
+  .lg\\:hidden { display: none; }
+  .lg\\:block { display: block; }
+  .lg\\:flex { display: flex; }
+  .lg\\:grid { display: grid; }
+  .lg\\:grid-cols-4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+}
+
+@media (min-width: --breakpoint-xl) {
+  .xl\\:hidden { display: none; }
+  .xl\\:block { display: block; }
+  .xl\\:flex { display: flex; }
+  .xl\\:grid { display: grid; }
+}
+
+// ============================================================================
+// 暗色模式适配
+// ============================================================================
+
+html.dark {
+  color-scheme: dark;
+}
+
+// ============================================================================
+// 打印样式
+// ============================================================================
+
+@media print {
+  .no-print {
+    display: none !important;
+  }
+
+  body {
+    background: white;
+    color: black;
+  }
+
+  a {
+    text-decoration: underline;
+  }
+}

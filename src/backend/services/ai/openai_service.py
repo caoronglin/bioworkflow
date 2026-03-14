@@ -1,288 +1,263 @@
-"""
-OpenAI Service for BioWorkflow
+from __future__ import annotations
 
-Provides AI-powered features including:
-- Natural language to SQL query generation
-- Data analysis and insights
-- Code generation and assistance
-- Chat completion with streaming support
-"""
-
-import os
 import asyncio
-import logging
-import json
-from typing import List, Dict, Any, AsyncGenerator, Optional
+import importlib
+import os
+from collections.abc import AsyncGenerator
 from datetime import datetime
-from openai import AsyncOpenAI
-from pydantic import BaseModel, Field
-import pandas as pd
+from typing import Any
 
-logger = logging.getLogger(__name__)
+import pandas as pd
+from pydantic import BaseModel, Field
+
 MAX_DATA_ROWS = 10000
 
 
 class ChatMessage(BaseModel):
-    """Chat message model"""
-
     role: str = Field(..., description="Message role: system, user, or assistant")
     content: str = Field(..., description="Message content")
 
 
 class SQLGenerationRequest(BaseModel):
-    """SQL generation request"""
-
     natural_query: str = Field(..., description="Natural language query")
-    schema: Dict[str, Any] = Field(..., description="Database schema information")
-    context: Optional[str] = Field(None, description="Additional context")
+    database_schema: dict[str, Any] = Field(..., description="Database schema information")
+    context: str | None = Field(None, description="Additional context")
 
 
 class DataAnalysisRequest(BaseModel):
-    """Data analysis request"""
-
-    data: List[Dict[str, Any]] = Field(..., description="Data to analyze")
+    data: list[dict[str, Any]] = Field(..., description="Data to analyze")
     context: str = Field(..., description="Analysis context")
-    focus_areas: Optional[List[str]] = Field(None, description="Specific areas to focus on")
+    focus_areas: list[str] | None = Field(None, description="Specific areas to focus on")
 
 
 class ChartSuggestion(BaseModel):
-    """Chart suggestion model"""
-
     chart_type: str = Field(..., description="Suggested chart type")
     reason: str = Field(..., description="Why this chart type is suggested")
-    configuration: Dict[str, Any] = Field(..., description="Chart configuration")
+    configuration: dict[str, Any] = Field(..., description="Chart configuration")
+
+
+class SQLResponseModel(BaseModel):
+    sql: str = Field(..., description="Generated SQL query")
+    confidence: str = Field(..., description="Confidence level: high, medium, or low")
 
 
 class OpenAIService:
-    """
-    OpenAI Service for BioWorkflow
-
-    Provides AI-powered features for the platform.
-    """
-
     def __init__(
         self,
-        api_key: Optional[str] = None,
-        base_url: Optional[str] = None,
+        api_key: str | None = None,
+        base_url: str | None = None,
         default_model: str = "gpt-4",
         temperature: float = 0.7,
         max_tokens: int = 4096,
-    ):
-        """
-        Initialize OpenAI Service
-
-        Args:
-            api_key: OpenAI API key (defaults to OPENAI_API_KEY env var)
-            base_url: Custom base URL for OpenAI API
-            default_model: Default model to use
-            temperature: Sampling temperature
-            max_tokens: Maximum tokens in response
-        """
-        self.api_key = api_key or os.getenv("OPENAI_API_KEY")
-        self.base_url = base_url or os.getenv("OPENAI_BASE_URL")
-        self.default_model = default_model
-        self.temperature = temperature
-        self.max_tokens = max_tokens
+    ) -> None:
+        self.api_key: str | None = api_key or os.getenv("OPENAI_API_KEY")
+        self.base_url: str | None = base_url or os.getenv("OPENAI_BASE_URL")
+        self.default_model: str = default_model
+        self.temperature: float = temperature
+        self.max_tokens: int = max_tokens
 
         if not self.api_key:
             raise ValueError(
-                "OpenAI API key not found. Please set OPENAI_API_KEY environment variable."
+                "OpenAI API key not found. Please set OPENAI_API_KEY environment variable.",
             )
 
-        # Initialize AsyncOpenAI client
-        self.client = AsyncOpenAI(api_key=self.api_key, base_url=self.base_url)
+    def _create_model(
+        self,
+        model_name: str | None = None,
+        temperature: float | None = None,
+        stream: bool = False,
+        max_tokens: int | None = None,
+    ) -> Any:
+        openai_chat_model = getattr(importlib.import_module("agentscope.model"), "OpenAIChatModel")
+
+        client_kwargs: dict[str, Any] = {}
+        if self.base_url:
+            client_kwargs["base_url"] = self.base_url
+
+        return openai_chat_model(
+            model_name=model_name or self.default_model,
+            api_key=self.api_key,
+            stream=stream,
+            client_kwargs=client_kwargs or None,
+            generate_kwargs={
+                "temperature": self.temperature if temperature is None else temperature,
+                "max_tokens": self.max_tokens if max_tokens is None else max_tokens,
+            },
+        )
+
+    async def _run_agent(
+        self,
+        *,
+        system_prompt: str,
+        user_prompt: str,
+        model_name: str | None = None,
+        temperature: float | None = None,
+        stream: bool = False,
+        max_tokens: int | None = None,
+        structured_model: type[BaseModel] | None = None,
+    ) -> tuple[str, dict[str, Any]]:
+        react_agent = getattr(importlib.import_module("agentscope.agent"), "ReActAgent")
+        openai_chat_formatter = getattr(
+            importlib.import_module("agentscope.formatter"),
+            "OpenAIChatFormatter",
+        )
+        in_memory_memory = getattr(importlib.import_module("agentscope.memory"), "InMemoryMemory")
+        msg_type = getattr(importlib.import_module("agentscope.message"), "Msg")
+
+        agent = react_agent(
+            name="BioWorkflowAI",
+            sys_prompt=system_prompt,
+            model=self._create_model(
+                model_name=model_name,
+                temperature=temperature,
+                stream=stream,
+                max_tokens=max_tokens,
+            ),
+            formatter=openai_chat_formatter(),
+            memory=in_memory_memory(),
+        )
+        response = await agent(
+            msg_type(name="user", content=user_prompt, role="user"),
+            structured_model=structured_model,
+        )
+        content = response.get_text_content()
+        metadata = dict(response.metadata) if isinstance(response.metadata, dict) else {}
+        return content, metadata
 
     async def chat_completion(
         self,
-        messages: List[Dict[str, str]],
-        model: Optional[str] = None,
-        temperature: Optional[float] = None,
-        max_tokens: Optional[int] = None,
+        messages: list[dict[str, str]],
+        model: str | None = None,
+        temperature: float | None = None,
+        max_tokens: int | None = None,
         stream: bool = False,
-        tools: Optional[List[Dict]] = None,
+        tools: list[dict[str, Any]] | None = None,
     ) -> AsyncGenerator[str, None]:
-        """
-        Chat completion with streaming support
+        del tools
+        system_prompt = "You are a helpful AI assistant for BioWorkflow."
+        non_system_messages = []
+        for message in messages:
+            role = message.get("role", "user")
+            content = message.get("content", "")
+            if role == "system":
+                system_prompt = content
+            else:
+                non_system_messages.append(f"{role.upper()}: {content}")
 
-        Args:
-            messages: List of chat messages
-            model: Model to use (defaults to self.default_model)
-            temperature: Sampling temperature
-            max_tokens: Maximum tokens
-            stream: Whether to stream response
-            tools: Tools for function calling
-
-        Yields:
-            Response chunks (if streaming) or full response
-        """
-        response = await self.client.chat.completions.create(
-            model=model or self.default_model,
-            messages=messages,
-            temperature=temperature or self.temperature,
-            max_tokens=max_tokens or self.max_tokens,
+        user_prompt = "\n\n".join(non_system_messages) or "Please respond to the user."
+        content, _ = await self._run_agent(
+            system_prompt=system_prompt,
+            user_prompt=user_prompt,
+            model_name=model,
+            temperature=temperature,
             stream=stream,
-            tools=tools,
+            max_tokens=max_tokens,
         )
 
         if stream:
-            async for chunk in response:
-                if chunk.choices[0].delta.content:
-                    yield chunk.choices[0].delta.content
-        else:
-            usage = response.usage
-            if usage:
-                logger.info(
-                    "Token usage: prompt=%d, completion=%d, total=%d",
-                    usage.prompt_tokens,
-                    usage.completion_tokens,
-                    usage.total_tokens,
-                )
-            yield response.choices[0].message.content
+            for chunk in self._chunk_text(content):
+                yield chunk
+            return
 
-    async def generate_sql(self, request: SQLGenerationRequest) -> Dict[str, Any]:
-        """
-        Generate SQL from natural language query
+        yield content
 
-        Args:
-            request: SQL generation request with natural query and schema
-
-        Returns:
-            Dictionary with generated SQL and metadata
-        """
-        prompt = f"""You are a SQL expert. Convert the following natural language query into SQL.
-
-Database Schema:
-{json.dumps(request.schema, indent=2, ensure_ascii=False)}
-
-Natural Language Query:
-{request.natural_query}
-
-{f"Additional Context: {request.context}" if request.context else ""}
-
-Requirements:
-1. Generate syntactically correct SQL
-2. Use appropriate JOINs when needed
-3. Include proper WHERE clauses
-4. Use parameterized queries (use placeholders like %s or :param)
-5. Optimize for readability and performance
-6. Add comments for complex logic
-
-Return ONLY the SQL query without any explanation or markdown formatting."""
-
-        response = ""
-        async for chunk in self.chat_completion(
-            messages=[{"role": "user", "content": prompt}],
-            temperature=0.1,  # Low temperature for consistency
-        ):
-            response += chunk
-
-        sql = response.strip()
-
-        # Remove markdown code blocks if present
-        if sql.startswith("```sql"):
-            sql = sql[6:]
-        if sql.startswith("```"):
-            sql = sql[3:]
-        if sql.endswith("```"):
-            sql = sql[:-3]
-
-        sql = sql.strip()
+    async def generate_sql(self, request: SQLGenerationRequest) -> dict[str, Any]:
+        prompt = (
+            "Convert the following natural language request into safe SQL.\n\n"
+            f"Database schema:\n{request.database_schema}\n\n"
+            f"Natural language query:\n{request.natural_query}\n\n"
+            f"Additional context:\n{request.context or 'N/A'}\n\n"
+            "Requirements:\n"
+            "1. Return syntactically valid SQL.\n"
+            "2. Prefer readable SQL.\n"
+            "3. Use placeholders for parameters when needed.\n"
+            "4. Do not add markdown fences."
+        )
+        _, metadata = await self._run_agent(
+            system_prompt="You are a SQL expert for workflow metadata databases.",
+            user_prompt=prompt,
+            temperature=0.1,
+            structured_model=SQLResponseModel,
+        )
+        sql = str(metadata.get("sql", "")).strip()
+        confidence = str(metadata.get("confidence", "medium")).strip() or "medium"
 
         return {
             "sql": sql,
             "natural_query": request.natural_query,
-            "schema_used": request.schema,
-            "confidence": "high" if sql else "low",
+            "schema_used": request.database_schema,
+            "confidence": confidence,
             "generated_at": datetime.now().isoformat(),
         }
 
-    async def analyze_data(self, request: DataAnalysisRequest) -> Dict[str, Any]:
-        """
-        Analyze data and generate insights
-
-        Args:
-            request: Data analysis request with data and context
-
-        Returns:
-            Dictionary with analysis results and insights
-        """
-        # Convert data to DataFrame for analysis
+    async def analyze_data(self, request: DataAnalysisRequest) -> dict[str, Any]:
         if len(request.data) > MAX_DATA_ROWS:
             raise ValueError(
-                f"Data exceeds maximum allowed rows ({MAX_DATA_ROWS}). "
-                f"Please reduce dataset size."
+                f"Data exceeds maximum allowed rows ({MAX_DATA_ROWS}). Please reduce dataset size.",
             )
 
         df = pd.DataFrame(request.data)
-
-        # Generate basic statistics
-        stats = {
+        columns = [str(column) for column in df.columns]
+        stats: dict[str, Any] = {
             "row_count": len(df),
-            "column_count": len(df.columns),
-            "columns": list(df.columns),
-            "dtypes": df.dtypes.to_dict(),
-            "memory_usage": df.memory_usage(deep=True).sum(),
+            "column_count": len(columns),
+            "columns": columns,
+            "dtypes": {str(key): str(value) for key, value in df.dtypes.to_dict().items()},
+            "memory_usage": int(df.memory_usage(deep=True).sum()),
         }
 
-        # Generate description for numeric columns
-        if df.select_dtypes(include=["number"]).columns.any():
-            numeric_desc = df.describe().to_dict()
-            stats["numeric_summary"] = numeric_desc
+        numeric_columns = df.select_dtypes(include=["number"]).columns.tolist()
+        if numeric_columns:
+            stats["numeric_summary"] = df[numeric_columns].describe().to_dict()
 
-        # Prepare data sample for AI analysis
         data_sample = df.head(50).to_dict(orient="records")
+        focus_areas = request.focus_areas or []
+        prompt = (
+            f"Context: {request.context}\n\n"
+            f"Columns: {', '.join(columns)}\n"
+            f"Row count: {stats['row_count']}\n"
+            f"Focus areas: {', '.join(focus_areas) if focus_areas else 'general analysis'}\n\n"
+            f"Data sample:\n{data_sample}\n\n"
+            "Provide concise sections for key metrics, anomalies, trends, and recommendations."
+        )
 
-        prompt = f"""You are a data analysis expert. Analyze the following data and provide insights.
-
-Context: {request.context}
-
-Data Statistics:
-- Total Rows: {stats["row_count"]}
-- Total Columns: {stats["column_count"]}
-- Columns: {", ".join(stats["columns"])}
-
-Data Sample (first 50 rows):
-{json.dumps(data_sample, indent=2, ensure_ascii=False)}
-
-{f"Focus Areas: {', '.join(request.focus_areas)}" if request.focus_areas else ""}
-
-Please provide a comprehensive analysis including:
-
-1. **Key Metrics**: Most important numbers and what they indicate
-2. **Anomaly Detection**: Any unusual patterns, outliers, or unexpected values
-3. **Trend Analysis**: Patterns over time (if temporal data present)
-4. **Recommendations**: Actionable suggestions based on the data
-
-Format your response in clear sections with headers. Be specific and reference actual values from the data."""
-
-        response = ""
-        async for chunk in self.chat_completion(
-            messages=[{"role": "user", "content": prompt}], temperature=0.7
-        ):
-            response += chunk
-
-        # Extract chart suggestions if applicable
-        chart_suggestions = await self._suggest_charts(df, request.context)
+        analysis, _ = await self._run_agent(
+            system_prompt="You are a data analyst for workflow and execution telemetry.",
+            user_prompt=prompt,
+            temperature=0.4,
+        )
+        chart_suggestions = [
+            suggestion.model_dump()
+            for suggestion in await self._suggest_charts(df, request.context)
+        ]
 
         return {
-            "analysis": response,
+            "analysis": analysis,
             "statistics": stats,
             "chart_suggestions": chart_suggestions,
             "data_sample": data_sample,
             "generated_at": datetime.now().isoformat(),
-            "focus_areas": request.focus_areas or [],
+            "focus_areas": focus_areas,
         }
 
-    async def _suggest_charts(self, df: pd.DataFrame, context: str) -> List[ChartSuggestion]:
-        """Suggest appropriate chart types for the data"""
-        suggestions = []
+    async def _suggest_charts(
+        self,
+        df: pd.DataFrame,
+        context: str,
+    ) -> list[ChartSuggestion]:
+        del context
+        suggestions: list[ChartSuggestion] = []
+        numeric_cols = [
+            str(column) for column in df.select_dtypes(include=["number"]).columns.tolist()
+        ]
+        categorical_cols = [
+            str(column)
+            for column in df.select_dtypes(include=["object", "category"]).columns.tolist()
+        ]
+        datetime_cols = [
+            str(column) for column in df.select_dtypes(include=["datetime"]).columns.tolist()
+        ]
 
-        # Analyze data types
-        numeric_cols = df.select_dtypes(include=["number"]).columns.tolist()
-        categorical_cols = df.select_dtypes(include=["object", "category"]).columns.tolist()
-        datetime_cols = df.select_dtypes(include=["datetime"]).columns.tolist()
-
-        # Suggest line chart for time series
         if datetime_cols and numeric_cols:
             suggestions.append(
                 ChartSuggestion(
@@ -293,10 +268,9 @@ Format your response in clear sections with headers. Be specific and reference a
                         "y_axis": numeric_cols[0],
                         "time_unit": "auto",
                     },
-                )
+                ),
             )
 
-        # Suggest bar chart for categorical comparison
         if categorical_cols and numeric_cols:
             suggestions.append(
                 ChartSuggestion(
@@ -307,44 +281,45 @@ Format your response in clear sections with headers. Be specific and reference a
                         "y_axis": numeric_cols[0],
                         "aggregation": "sum",
                     },
-                )
+                ),
             )
 
-        # Suggest pie chart for distribution
         if len(categorical_cols) > 0 and len(numeric_cols) > 0:
             suggestions.append(
                 ChartSuggestion(
                     chart_type="pie",
                     reason="Shows distribution of categories as proportions of a whole.",
                     configuration={"category": categorical_cols[0], "value": numeric_cols[0]},
-                )
+                ),
             )
 
-        # Suggest scatter plot for correlation
         if len(numeric_cols) >= 2:
             suggestions.append(
                 ChartSuggestion(
                     chart_type="scatter",
-                    reason="Two numeric variables detected. Scatter plot reveals correlations and distributions.",
+                    reason="Two numeric variables detected. Scatter plot reveals correlations.",
                     configuration={
                         "x_axis": numeric_cols[0],
                         "y_axis": numeric_cols[1],
-                        "size": None,
                         "color": categorical_cols[0] if categorical_cols else None,
                     },
-                )
+                ),
             )
 
         return suggestions
 
+    @staticmethod
+    def _chunk_text(content: str, chunk_size: int = 120) -> list[str]:
+        return [
+            content[index : index + chunk_size] for index in range(0, len(content), chunk_size)
+        ] or [""]
 
-# Singleton instance
-_openai_service: Optional[OpenAIService] = None
+
+_openai_service: OpenAIService | None = None
 _openai_lock = asyncio.Lock()
 
 
 async def get_openai_service() -> OpenAIService:
-    """Get or create OpenAI service singleton (thread-safe)"""
     global _openai_service
     if _openai_service is None:
         async with _openai_lock:

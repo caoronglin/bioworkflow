@@ -59,7 +59,7 @@ def _generate_secret_key_if_dev() -> str:
             f"此密钥仅在当前进程有效，重启后会重新生成。\n"
             f"建议: 在 .env 文件中设置固定的 SECRET_KEY 以避免会话失效。",
             RuntimeWarning,
-            stacklevel=3
+            stacklevel=3,
         )
         return temp_key
 
@@ -182,6 +182,15 @@ class Settings(BaseSettings):
     KNOWLEDGE_BASE_DIR: str = Field(
         default="./knowledge_base",
         description="知识库目录",
+    )
+
+    # AI / AgentScope 配置
+    OPENAI_API_KEY: str | None = Field(default=None, description="OpenAI API key")
+    OPENAI_BASE_URL: str | None = Field(default=None, description="OpenAI-compatible API base URL")
+    AGENTSCOPE_EVAL_ENABLED: bool = Field(default=False, description="是否启用 AgentScope 评测")
+    AGENTSCOPE_EVAL_RESULTS_DIR: str = Field(
+        default="./artifacts/agentscope-eval",
+        description="AgentScope 评测结果目录",
     )
 
     # 日志配置

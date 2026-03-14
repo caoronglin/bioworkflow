@@ -60,6 +60,7 @@ dependencies = [
     "aiohttp>=3.11.0",
     "httpx>=0.28.0",
     "websockets>=14.0",
+    "agentscope>=1.0.16",
 
     # Utils
     "python-dotenv>=1.0.1",
@@ -103,6 +104,11 @@ dev = [
     "faker>=35.0.0",
     "httpx>=0.28.0",  # For testing FastAPI
     "asgi-lifespan>=2.1.0",
+    "pandas-stubs>=2.2.3.250308",
+]
+
+eval = [
+    "py-openjudge>=0.1.0",
 ]
 
 docs = [
