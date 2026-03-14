@@ -130,26 +130,28 @@ markdown_extensions:
 
 # 导航配置
 nav:
-  - 首页: index.md
-  - 快速开始:
-    - 安装指南: guide/installation.md
-    - 快速入门: guide/quickstart.md
-    - 配置文件: guide/configuration.md
-  - 用户指南:
-    - 工作流管理: guide/workflows.md
-    - Conda 环境: guide/conda.md
-    - 知识库: guide/knowledge.md
-    - MCP 服务: guide/mcp.md
-  - 部署指南:
-    - Docker 部署: deployment/docker.md
-    - Kubernetes 部署: deployment/kubernetes.md
-    - 生产环境配置: deployment/production.md
-  - 开发文档:
-    - 架构设计: development/architecture.md
-    - API 文档: api/index.md
-    - 数据库模型: development/models.md
-    - 贡献指南: development/contributing.md
-  - 参考:
-    - 环境变量: reference/environment.md
-    - CLI 命令: reference/cli.md
-    - 常见问题: reference/faq.md
+  - Home: index.md
+  - Getting Started:
+    - Installation: guide/installation.md
+    - Quickstart: guide/quickstart.md
+    - Configuration: guide/configuration.md
+  - User Guide:
+    - Workflows: guide/workflows.md
+    - Conda: guide/conda.md
+    - Knowledge Base: guide/knowledge.md
+    - MCP Services: guide/mcp.md
+  - Deployment:
+    - Docker: deployment/docker.md
+    - Production: deployment/production.md
+  - Development:
+    - Architecture: development/architecture.md
+    - Contributing: development/contributing.md
+    - Plugin Guide: development/plugins.md
+  - API Reference:
+    - Overview: api/index.md
+    - Endpoints: api/endpoints.md
+  - Reference:
+    - Environment: reference/environment.md
+    - FAQ: reference/faq.md
+  - Architecture:
+    - Overview: architecture/overview.md

@@ -1,4 +1,5 @@
 import axios from 'axios'
+import router from '@/router'
 
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL || 'http://localhost:8000/api',
@@ -21,10 +22,11 @@ api.interceptors.response.use(
     if (error.response?.status === 401) {
       // 处理认证错误
       localStorage.removeItem('token')
-      window.location.href = '/login'
+      router.push({ name: 'Login' })
     }
     return Promise.reject(error)
   }
 )
 
+export { api as apiClient }
 export default api

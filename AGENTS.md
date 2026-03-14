@@ -18,6 +18,10 @@ pytest tests/ --cov=src/backend --cov-report=html
 
 # Run only unit tests (exclude slow/integration)
 pytest tests/ -v -m "not slow and not integration"
+
+# Run specific test markers
+pytest tests/ -v -m "slow"          # Only slow tests
+pytest tests/ -v -m "integration"   # Only integration tests
 ```
 
 ### Linting and Formatting
@@ -39,6 +43,9 @@ mypy src/backend
 
 # Run all quality checks
 black src/ tests/ && isort src/ tests/ && ruff check src/ tests/ && mypy src/backend
+
+# Run pre-commit hooks on all files
+pre-commit run --all-files
 ```
 
 ### Frontend Commands
@@ -59,18 +66,50 @@ npm run lint
 
 # Run Prettier
 npm run format
+
+# Type check
+npm run type-check
+```
+
+### Service-Specific Commands
+```bash
+# Workflow service
+cd services/workflow-service
+pip install -e ".[dev]"
+pytest tests/ -v
+
+# Miniforge service
+cd services/miniforge-service
+pip install -e ".[dev]"
+pytest tests/ -v
+```
+
+### Docker Commands
+```bash
+# Start all services with Docker Compose
+docker-compose up -d
+
+# View logs
+docker-compose logs -f app
+
+# Rebuild containers
+docker-compose up -d --build
+
+# Stop all services
+docker-compose down
 ```
 
 ## Code Style Guidelines
 
 ### Python
 - **Line length**: 100 characters max
-- **Python version**: 3.14+ (use modern features like union types `X | Y`)
+- **Python version**: 3.12+ (use modern features like union types `X | Y`)
 - **Formatter**: Black
 - **Import sorting**: isort with `profile = "black"`
+- **Linter**: Ruff with rules: E, F, W, I, N, UP, B, C4, SIM, PERF, FURB, RUF
 
 #### Naming Conventions
-- **Classes**: `PascalCase` (e.g., `PipelineManager`)
+- **Classes**: `PascalCase` (e.g., `WorkflowExecutionEngine`)
 - **Functions/Variables**: `snake_case` (e.g., `get_pipeline_status`)
 - **Constants**: `UPPER_SNAKE_CASE` (e.g., `MAX_RETRY_COUNT`)
 - **Private members**: Leading underscore (e.g., `_internal_helper`)
@@ -84,19 +123,19 @@ npm run format
 #### Imports
 ```python
 # Standard library imports
-from typing import TYPE_CHECKING
-import asyncio
-from pathlib import Path
+from contextlib import asynccontextmanager
+from datetime import datetime
+from typing import Literal
 
 # Third-party imports
-from fastapi import FastAPI, HTTPException
-from sqlalchemy import select
-from pydantic import BaseModel
+from fastapi import FastAPI, HTTPException, Request
+from pydantic import Field, field_validator
+from pydantic_settings import BaseSettings
 
 # Local application imports (absolute imports preferred)
 from backend.core.config import settings
-from backend.models.pipeline import Pipeline
-from backend.services.pipeline.manager import PipelineManager
+from backend.core.logging import setup_logging
+from backend.middleware import PerformanceMiddleware
 ```
 
 #### Error Handling
@@ -104,6 +143,7 @@ from backend.services.pipeline.manager import PipelineManager
 - Always catch specific exceptions first
 - Use FastAPI's `HTTPException` for API errors
 - Use custom exception classes for business logic
+- Log exceptions with `logger.exception()` for unexpected errors
 
 ```python
 # Good
@@ -113,7 +153,7 @@ except ValueError as e:
     logger.error(f"Invalid data format: {e}")
     raise HTTPException(status_code=400, detail="Invalid data format")
 except PipelineExecutionError as e:
-    logger.error(f"Pipeline failed: {e}")
+    logger.exception(f"Pipeline failed: {e}")
     raise HTTPException(status_code=500, detail="Pipeline execution failed")
 ```
 
@@ -140,7 +180,7 @@ async def fetch_multiple(urls: list[str]) -> list[dict]:
 - Use `const` and `let`, never `var`
 
 #### Naming Conventions
-- **Components**: `PascalCase` (e.g., `PipelineEditor.vue`)
+- **Components**: `PascalCase` (e.g., `WorkflowEditor.vue`)
 - **Composables**: `use` prefix + `camelCase` (e.g., `usePipelineStore`)
 - **Types/Interfaces**: `PascalCase` with descriptive names
 
@@ -167,13 +207,32 @@ feat(pipelines): add async execution support
 
 ## Project-Specific Notes
 
-- **Python 3.14+**: Use modern syntax features like union types (`X | Y`)
+- **Python 3.12+**: Use modern syntax features like union types (`X | Y`)
 - **FastAPI**: Uses dependency injection; leverage `Depends()` for services
 - **SQLAlchemy 2.0**: Use `select()` syntax and async session patterns
-- **Pydantic v2**: Use `model_validator` instead of deprecated `validator`
+- **Pydantic v2**: Use `field_validator` instead of deprecated `validator`
 - **Snakemake 9.0+**: Workflow execution engine
 - **MCP**: Model Context Protocol integration for AI tools
 - **Vue 3**: Frontend uses Composition API with TypeScript
+- **Rust**: Performance-critical components in `rust/` directory
+
+## Architecture
+
+```
+src/backend/
+├── api/routes/      # API endpoints
+├── core/            # Config, database, interfaces
+├── infrastructure/  # Cache, events, metrics, search
+├── models/          # SQLAlchemy models
+├── services/        # Business logic
+└── middleware/      # Request/response middleware
+
+src/frontend/
+├── pages/           # Page components
+├── components/      # Reusable components
+├── stores/          # Pinia state management
+└── api/             # API client modules
+```
 
 ## Quick Reference
 
@@ -184,3 +243,5 @@ feat(pipelines): add async execution support
 | `ruff check src/ tests/ --fix` | Lint and auto-fix |
 | `mypy src/backend` | Type check |
 | `cd src/frontend && npm run dev` | Start frontend |
+| `docker-compose up -d` | Start all services |
+| `pre-commit run --all-files` | Run all hooks |

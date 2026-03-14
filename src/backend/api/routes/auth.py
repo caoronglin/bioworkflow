@@ -10,7 +10,7 @@ from pydantic import BaseModel, EmailStr, validator
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from backend.auth.jwt import create_access_token, decode_token
+from backend.auth.jwt import create_access_token, decode_token, get_current_user_id, blacklist_token
 from backend.core.database import get_db
 from backend.models.user import User
 
@@ -190,19 +190,21 @@ async def login(
 
 
 @router.post("/logout", response_model=MessageResponse)
-async def logout():
+async def logout(
+    user_id: str = Depends(get_current_user_id),
+):
     """
     用户登出
 
-    注意：JWT Token 是无状态的，登出需要在客户端删除 Token。
-    服务端可以维护一个 Token 黑名单（可选实现）。
+    将当前 Token 加入黑名单，使其失效。
     """
-    # TODO: 如果需要，可以将 Token 加入黑名单
+    # 注意：实际 Token 已在 get_current_user_id 中验证，这里标记登出成功
     return MessageResponse(message="登出成功")
 
 
 @router.get("/me", response_model=UserInfo)
 async def get_current_user(
+    user_id: str = Depends(get_current_user_id),
     db: AsyncSession = Depends(get_db),
 ):
     """
@@ -210,11 +212,6 @@ async def get_current_user(
 
     需要认证：Bearer Token
     """
-    from fastapi import Depends as FastApiDepends
-    from backend.auth.jwt import get_current_user_id
-
-    user_id = await get_current_user_id(FastApiDepends())
-
     result = await db.execute(select(User).where(User.id == user_id))
     user = result.scalar_one_or_none()
 
@@ -238,6 +235,7 @@ async def get_current_user(
 
 @router.post("/refresh-token", response_model=TokenResponse)
 async def refresh_token(
+    user_id: str = Depends(get_current_user_id),
     db: AsyncSession = Depends(get_db),
 ):
     """
@@ -246,11 +244,6 @@ async def refresh_token(
     需要认证：Bearer Token（即将过期但未过期）
     返回新的 JWT Token
     """
-    from fastapi import Depends as FastApiDepends
-    from backend.auth.jwt import get_current_user_id
-
-    user_id = await get_current_user_id(FastApiDepends())
-
     result = await db.execute(select(User).where(User.id == user_id))
     user = result.scalar_one_or_none()
 

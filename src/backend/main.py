@@ -37,6 +37,24 @@ async def lifespan(app: FastAPI):
         logger.error(f"❌ Database initialization failed: {e}")
         raise
 
+    # 初始化 Redis（用于速率限制等）
+    redis_client = None
+    try:
+        from redis.asyncio import from_url as redis_from_url
+
+        redis_client = redis_from_url(
+            settings.REDIS_URL,
+            decode_responses=True,
+            socket_connect_timeout=3,
+        )
+        await redis_client.ping()
+        app.state.redis_client = redis_client
+        logger.info("✅ Redis connected")
+    except Exception as e:
+        logger.warning(f"⚠️  Redis unavailable, using local fallback: {e}")
+        app.state.redis_client = None
+        redis_client = None
+
     logger.info(f"🚀 BioWorkflow v{settings.VERSION} started in {settings.ENVIRONMENT} mode")
 
     # 发布启动事件
@@ -49,6 +67,11 @@ async def lifespan(app: FastAPI):
 
     # 关闭事件
     logger.info("👋 BioWorkflow shutting down...")
+
+    # 关闭 Redis
+    if redis_client:
+        await redis_client.aclose()
+        logger.info("✅ Redis connection closed")
 
     # 关闭数据库
     await close_db()
@@ -93,10 +116,9 @@ def create_app() -> FastAPI:
     # Gzip 压缩中间件
     app.add_middleware(GZipMiddleware, minimum_size=1000)
 
-    # 速率限制中间件（必须在CORS之前）
+    # 速率限制中间件（Redis 在 lifespan 中注入到 app.state）
     app.add_middleware(
         RateLimitMiddleware,
-        redis_client=None,  # 暂时使用本地模式，后续接入Redis
         whitelist=["127.0.0.1", "::1"],  # 本地开发环境白名单
     )
 

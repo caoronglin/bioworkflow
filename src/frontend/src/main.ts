@@ -2,7 +2,6 @@ import { createApp } from 'vue'
 import { createPinia } from 'pinia'
 import ElementPlus from 'element-plus'
 import * as ElementPlusIconsVue from '@element-plus/icons-vue'
-import { VueFlow } from '@vue-flow/core'
 
 // 样式导入
 import 'element-plus/dist/index.css'
@@ -26,6 +25,10 @@ for (const [key, component] of Object.entries(ElementPlusIconsVue)) {
 app.use(createPinia())
 app.use(router)
 app.use(ElementPlus)
-app.use(VueFlow)
+
+app.config.errorHandler = (err, _instance, info) => {
+  console.error('[Global Error]', err, info)
+}
+
 
 app.mount('#app')

@@ -25,7 +25,7 @@
         </el-tooltip>
         <el-tooltip content="更改类型">
           <el-button
-            :icon="cellType === 'code' ? Document : Code"
+            :icon="cellType === 'code' ? Document : EditPen"
             size="small"
             circle
             @click.stop="toggleType"
@@ -93,7 +93,7 @@
           />
           <div
             v-if="output.content.data['text/html']"
-            v-html="output.content.data['text/html']"
+            v-html="DOMPurify.sanitize(output.content.data['text/html'])"
           />
         </div>
 
@@ -116,11 +116,12 @@
 <script setup lang="ts">
 import { ref, computed, watch, nextTick } from 'vue'
 import { marked } from 'marked'
+import DOMPurify from 'dompurify'
 import {
   CaretRight,
   Delete,
   Document,
-  Code,
+  EditPen,
   Loading,
 } from '@element-plus/icons-vue'
 
@@ -160,7 +161,7 @@ const hasError = computed(() => props.outputs.some(o => o.type === 'error'))
 
 // 渲染 Markdown
 const renderedMarkdown = computed(() => {
-  return marked(localContent.value || '')
+  return DOMPurify.sanitize(marked(localContent.value || '') as string)
 })
 
 // 同步内容

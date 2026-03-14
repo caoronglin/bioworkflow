@@ -10,6 +10,8 @@ from pydantic import BaseModel
 
 from backend.core.config import settings
 
+# Token 黑名单（内存存储，生产环境应使用 Redis）
+_token_blacklist: set[str] = set()
 # JWT 配置
 SECRET_KEY = settings.SECRET_KEY
 ALGORITHM = settings.ALGORITHM
@@ -65,6 +67,11 @@ def create_access_token(
     return jwt.encode(payload, SECRET_KEY, algorithm=ALGORITHM)
 
 
+def blacklist_token(token: str) -> None:
+    """将 Token 加入黑名单"""
+    _token_blacklist.add(token)
+
+
 def decode_token(token: str) -> Optional[TokenPayload]:
     """
     解码并验证 JWT 令牌
@@ -78,6 +85,9 @@ def decode_token(token: str) -> Optional[TokenPayload]:
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
 
+        # 检查黑名单
+        if token in _token_blacklist:
+            return None
         # 验证必要字段
         if "sub" not in payload or "exp" not in payload:
             return None

@@ -2,7 +2,6 @@
 
 from .performance import (
     CacheControlMiddleware,
-    CompressionMiddleware,
     PerformanceMiddleware,
     query_optimizer,
 )
@@ -22,7 +21,6 @@ __all__ = [
     # 性能监控中间件
     "PerformanceMiddleware",
     "CacheControlMiddleware",
-    "CompressionMiddleware",
     "query_optimizer",
     # 速率限制中间件
     "RateLimitMiddleware",

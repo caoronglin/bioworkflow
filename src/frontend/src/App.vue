@@ -86,23 +86,23 @@
               </el-tooltip>
               
               <!-- 通知 -->
-              <el-badge :value="3" class="notification-badge">
+              <el-badge :value="notifications.length" class="notification-badge">
                 <el-button :icon="Bell" circle text @click="showNotifications" />
               </el-badge>
               
               <!-- 用户菜单 -->
-              <el-dropdown trigger="click">
+              <el-dropdown trigger="click" @command="handleCommand">
                 <div class="user-info">
                   <el-avatar :size="32" :icon="UserFilled" />
-                  <span class="username">Admin</span>
+                  <span class="username">{{ appStore.user?.username || '未登录' }}</span>
                   <el-icon><ArrowDown /></el-icon>
                 </div>
                 <template #dropdown>
                   <el-dropdown-menu>
-                    <el-dropdown-item :icon="User">个人信息</el-dropdown-item>
-                    <el-dropdown-item :icon="Setting">账号设置</el-dropdown-item>
+                    <el-dropdown-item :icon="User" command="profile">个人信息</el-dropdown-item>
+                    <el-dropdown-item :icon="Setting" command="settings">账号设置</el-dropdown-item>
                     <el-dropdown-divider />
-                    <el-dropdown-item :icon="SwitchButton" divided>退出登录</el-dropdown-item>
+                    <el-dropdown-item :icon="SwitchButton" command="logout" divided>退出登录</el-dropdown-item>
                   </el-dropdown-menu>
                 </template>
               </el-dropdown>
@@ -281,9 +281,30 @@ const showNotifications = () => {
   notificationDrawer.value = true
 }
 
-onMounted(() => {
+// 用户下拉菜单命令处理
+const handleCommand = async (command: string) => {
+  if (command === 'logout') {
+    await appStore.logout()
+    router.push({ name: 'Login' })
+  } else if (command === 'profile') {
+    router.push({ name: 'Settings' })
+  } else if (command === 'settings') {
+    router.push({ name: 'Settings' })
+  }
+}
+
+onMounted(async () => {
   // 初始化主题
   document.documentElement.classList.toggle('dark', isDarkMode.value)
+  
+  // 加载用户信息
+  if (appStore.token) {
+    try {
+      await appStore.fetchUserInfo()
+    } catch {
+      // token 无效时忽略，由路由守卫处理跳转
+    }
+  }
   
   // 添加当前路由到标签页
   appStore.addView({
