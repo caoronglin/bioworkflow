@@ -50,17 +50,36 @@
           </template>
 
           <div class="chat-container">
-            <div class="chat-messages" ref="chatMessagesRef">
-              <div v-for="(msg, idx) in chatMessages" :key="idx" :class="['message', msg.role]">
-                <div class="message-content">
-                  <div class="avatar">
-                    <el-icon v-if="msg.role === 'user'"><User /></el-icon>
-                    <el-icon v-else><Monitor /></el-icon>
+          <div class="chat-messages" ref="chatMessagesRef">
+            <div
+              style="height: 300px; overflow-y: auto"
+              ref="virtualParentRef"
+            >
+              <div :style="{ height: `${virtualizer.getTotalSize()}px`, position: 'relative' }">
+                <div
+                  v-for="virtualRow in virtualizer.getVirtualItems()"
+                  :key="String(virtualRow.key)"
+                  :style="{
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    width: '100%',
+                    transform: `translateY(${virtualRow.start}px)`,
+                  }"
+                >
+                  <div :class="['message', chatMessages[virtualRow.index].role]">
+                    <div class="message-content">
+                      <div class="avatar">
+                        <el-icon v-if="chatMessages[virtualRow.index].role === 'user'"><User /></el-icon>
+                        <el-icon v-else><Monitor /></el-icon>
+                      </div>
+                      <div class="text" v-html="chatMessages[virtualRow.index].content"></div>
+                    </div>
                   </div>
-                  <div class="text" v-html="msg.content"></div>
                 </div>
               </div>
             </div>
+          </div>
 
             <div class="chat-input">
               <el-input
@@ -119,6 +138,7 @@ import {
   Upload, Search, Folder, Document, ChatDotRound,
   User, Monitor, Promotion, Edit, Delete, UploadFilled
 } from '@element-plus/icons-vue'
+import { useVirtualizer } from '@tanstack/vue-virtual'
 import { knowledgeAPI } from '@/api'
 
 const searchQuery = ref('')
@@ -127,23 +147,38 @@ const selectedDoc = ref<any>(null)
 const userQuestion = ref('')
 const asking = ref(false)
 const chatMessagesRef = ref<HTMLElement>()
+const virtualParentRef = ref<HTMLElement>()
 
-// 文档树数据（从后端获取）
-const documentTree = ref<any[]>([])
-
-// 聊天消息
+// 聊天消息 - 必须在虚拟列表配置之前声明
 const chatMessages = ref([
   { role: 'assistant', content: '你好！我是 BioWorkflow AI 助手，可以回答关于生物信息学工作流的问题。' },
 ])
+
+// 虚拟列表配置 - 使用 getter 函数
+const virtualizer = useVirtualizer({
+  get count() { return chatMessages.value.length },
+  getScrollElement: () => virtualParentRef.value as Element | null,
+  estimateSize: () => 80,
+  overscan: 5,
+})
+
+const scrollToBottom = () => {
+  nextTick(() => {
+    virtualizer.value?.scrollToIndex(chatMessages.value.length - 1, { align: 'end' })
+  })
+}
+
+// 文档树数据（从后端获取）
+const documentTree = ref<any[]>([])
 
 // 点击文档
 const onDocClick = (data: any) => {
   if (data.type === 'file') {
     knowledgeAPI.getDocument(data.id)
-      .then((res) => {
+      .then((res: any) => {
         selectedDoc.value = {
-          name: res.title || data.name,
-          content: res.content || '<p>暂无内容</p>',
+          name: (res as any).title || data.name,
+          content: (res as any).content || '<p>暂无内容</p>',
         }
       })
       .catch(() => ElMessage.error('加载文档失败'))
@@ -159,14 +194,13 @@ const askQuestion = async () => {
   userQuestion.value = ''
   asking.value = true
 
-  await nextTick()
-  chatMessagesRef.value?.scrollTo({ top: chatMessagesRef.value.scrollHeight, behavior: 'smooth' })
+  await scrollToBottom()
 
   knowledgeAPI.aiQuery(question, true)
-    .then((res) => {
+    .then((res: any) => {
       chatMessages.value.push({
         role: 'assistant',
-        content: res.answer || '暂无回答',
+        content: (res as any).answer || '暂无回答',
       })
     })
     .catch(() => {
@@ -174,9 +208,7 @@ const askQuestion = async () => {
     })
     .finally(() => {
       asking.value = false
-      nextTick(() => {
-        chatMessagesRef.value?.scrollTo({ top: chatMessagesRef.value.scrollHeight, behavior: 'smooth' })
-      })
+      scrollToBottom()
     })
 }
 
@@ -189,8 +221,8 @@ const onUploadSuccess = () => {
 
 const loadDocuments = () => {
   knowledgeAPI.listDocuments()
-    .then((res) => {
-      const docs = res?.items || res || []
+    .then((res: any) => {
+      const docs = (res as any)?.items || (res as any) || []
       documentTree.value = docs.map((d: any) => ({
         name: d.title,
         id: d.id,

@@ -198,14 +198,17 @@ impl DagBuilder {
             }
         }
 
-        // Check for cycles
-        if let Some(cycle) = petgraph::algo::find_cycle(&graph) {
-            let cycle_str = cycle
-                .iter()
-                .map(|idx| graph[*idx].name.as_str())
-                .collect::<Vec<_>>()
-                .join(" → ");
-            return Err(DagBuilderError::Cycle(cycle_str).into());
+        // Check for cycles using kosaraju_scc
+        let sccs = petgraph::algo::kosaraju_scc(&graph);
+        for scc in &sccs {
+            if scc.len() > 1 {
+                let cycle_str = scc
+                    .iter()
+                    .map(|idx| graph[*idx].name.as_str())
+                    .collect::<Vec<_>>()
+                    .join(" → ");
+                return Err(DagBuilderError::Cycle(cycle_str).into());
+            }
         }
 
         Ok(WorkflowDag {

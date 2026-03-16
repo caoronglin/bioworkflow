@@ -27,7 +27,6 @@ priority-queue = "1.3"
 
 # 时间与定时
 chrono = { version = "0.4", features = ["serde"] }
-tokio-timer = { package = "tokio", features = ["time"] }
 
 # 配置与管理
 config = { workspace = true }
@@ -47,8 +46,8 @@ serde_json = { workspace = true }
 
 # Python 绑定
 pyo3 = { workspace = true, optional = true }
-pyo3-asyncio = { workspace = true, optional = true }
+pyo3-async-runtimes = { workspace = true, optional = true }
 
 [features]
 default = ["python"]
-python = ["pyo3", "pyo3-asyncio", "bioworkflow-core/python"]
+python = ["pyo3", "pyo3-async-runtimes", "bioworkflow-core/python"]

@@ -9,7 +9,7 @@ description = "Core library for BioWorkflow - shared types and utilities"
 
 [features]
 default = []
-python = ["pyo3", "pyo3-asyncio"]
+python = ["pyo3", "pyo3-async-runtimes"]
 
 [dependencies]
 # 序列化
@@ -35,7 +35,7 @@ metrics = { workspace = true }
 
 # Python 绑定 (可选)
 pyo3 = { workspace = true, optional = true }
-pyo3-asyncio = { workspace = true, optional = true }
+pyo3-async-runtimes = { workspace = true, optional = true }
 
 [dev-dependencies]
 tempfile = { workspace = true }

@@ -1,14 +1,22 @@
 [package]
 name = "bioworkflow-python"
-version = "0.1.0-alpha.1"nedition = "2021"nauthors = ["BioWorkflow Team <team@bioworkflow.org>"]nlicense = "MIT OR Apache-2.0"nrepository = "https://github.com/bioworkflow-platform/bioworkflow"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Python bindings for BioWorkflow"
 homepage = "https://bioworkflow.org"
 
 [lib]
-name = "_oworkflow"
-crate-type = ["cdylibn"]
+name = "bioworkflow"
+crate-type = ["cdylib"]
 
-[dependenciesnbioworkflow-core = { path = "../bioworkflow-core" }
-numpy = "0.20"
-pyo3 = "0.20"
-pyo3-asyncio = "0.20"
-EOF'
+[dependencies]
+bioworkflow-core = { path = "../bioworkflow-core", features = ["python"] }
+bioworkflow-dag = { path = "../bioworkflow-dag", features = ["python"] }
+bioworkflow-scheduler = { path = "../bioworkflow-scheduler", features = ["python"] }
+numpy = { workspace = true }
+pyo3 = { workspace = true }
+pyo3-async-runtimes = { workspace = true }
+tokio = { workspace = true }

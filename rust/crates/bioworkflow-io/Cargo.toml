@@ -1,0 +1,30 @@
+[package]
+name = "bioworkflow-io"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "High-performance I/O operations for BioWorkflow"
+
+[features]
+default = []
+python = ["pyo3", "bioworkflow-core/python"]
+
+[dependencies]
+bioworkflow-core = { path = "../bioworkflow-core" }
+
+tokio = { workspace = true, features = ["fs", "io-util"] }
+async-trait = { workspace = true }
+futures = { workspace = true }
+
+thiserror = { workspace = true }
+anyhow = { workspace = true }
+
+tracing = { workspace = true }
+
+pyo3 = { workspace = true, optional = true }
+
+[dev-dependencies]
+tempfile = { workspace = true }
+tokio-test = "0.4"

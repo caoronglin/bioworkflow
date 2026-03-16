@@ -185,8 +185,8 @@
 import { ref, computed, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import {
-  Plus, Search, More, Connection, Cpu, DataAnalysis,
-  ArrowDown, ChatDotRound, User, Monitor, Promotion, Edit, Delete, Upload, UploadFilled, Folder, Document
+  Plus, Search, Connection, Cpu, DataAnalysis,
+  ArrowDown
 } from '@element-plus/icons-vue'
 import { mcpAPI } from '@/api'
 
@@ -195,11 +195,6 @@ const services = ref<any[]>([])
 const loadingEnvs = ref(false)
 const serviceSearchQuery = ref('')
 const selectedService = ref<any>(null)
-
-// 包列表（这里用作能力列表）
-const packages = ref<any[]>([])
-const loadingPackages = ref(false)
-const packageSearchQuery = ref('')
 
 // 注册服务对话框
 const showRegisterDialog = ref(false)
@@ -218,14 +213,6 @@ const filteredServices = computed(() => {
   if (!serviceSearchQuery.value) return services.value
   return services.value.filter(s =>
     s.service_name.toLowerCase().includes(serviceSearchQuery.value.toLowerCase())
-  )
-})
-
-// 过滤后的能力列表
-const filteredPackages = computed(() => {
-  if (!packageSearchQuery.value) return packages.value
-  return packages.value.filter(p =>
-    p.name.toLowerCase().includes(packageSearchQuery.value.toLowerCase())
   )
 })
 
@@ -250,7 +237,7 @@ const loadServices = async () => {
   loadingEnvs.value = true
   try {
     const res = await mcpAPI.listServices()
-    services.value = res || []
+    services.value = (res as any) || []
   } catch (error) {
     ElMessage.error('加载 MCP 服务失败')
   } finally {
@@ -261,13 +248,6 @@ const loadServices = async () => {
 // 选择服务
 const selectService = (service: any) => {
   selectedService.value = service
-  // 模拟包数据为能力数据
-  packages.value = (service.capabilities || []).map((cap: string, idx: number) => ({
-    name: cap,
-    version: '1.0.0',
-    channel: 'mcp',
-    build: `py39_0${idx}`,
-  }))
 }
 
 // 注册服务
@@ -329,8 +309,11 @@ const handleServiceCommand = async (command: string) => {
       try {
         await ElMessageBox.confirm(
           `确定要删除服务 ${selectedService.value.service_name} 吗？`,
-          '确认删除',
-          { confirmButtonText: '删除', cancelButtonText: '取消', type: 'danger' }
+          {
+            confirmButtonText: '删除',
+            cancelButtonText: '取消',
+            type: 'warning',
+          }
         )
         await mcpAPI.unregisterService(selectedService.value.id)
         ElMessage.success('服务已删除')

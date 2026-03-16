@@ -1,10 +1,3 @@
-[package]
-name = "bioworkflow-workspace"
-version = "0.1.0-alpha.0"
-edition = "2021"
-authors = ["BioWorkflow Team <team@bioworkflow.org"]nlicense = "MIT OR Apache-2.0"
-repository = "https://github.com/bioworkflow-platform/bioworkflow"
-
 [workspace]
 members = [
     "crates/bioworkflow-core",
@@ -18,9 +11,47 @@ resolver = "2"
 [workspace.package]
 version = "0.1.0-alpha.1"
 edition = "2021"
-authors = ["BioWorkflow Team <team@bioworkflow.org"]nlicense = "MIT OR Apache-2.0"
+authors = ["BioWorkflow Team <team@bioworkflow.org>"]
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/bioworkflow-platform/bioworkflow"
 
 [workspace.dependencies]
-numpy = "0.20"
-pyo3 = "0.20"
-pyo3-asyncio = "0.20"
+# Python bindings
+pyo3 = { version = "0.25", features = ["extension-module", "abi3"] }
+pyo3-async-runtimes = { version = "0.25", features = ["tokio-runtime"] }
+numpy = "0.25"
+
+# Async runtime
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "sync", "time"] }
+async-trait = "0.1"
+futures = "0.3"
+
+# Serialization
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+# Error handling
+thiserror = "1"
+anyhow = "1"
+
+# Concurrency
+rayon = "1"
+dashmap = "6"
+parking_lot = "0.12"
+crossbeam = "0.8"
+
+# Logging
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
+# Metrics
+metrics = "0.24"
+
+# Testing
+tempfile = "3"
+mockall = "0.13"
+proptest = "1"
+
+# Configuration
+config = "0.15"
+dotenvy = "0.15"

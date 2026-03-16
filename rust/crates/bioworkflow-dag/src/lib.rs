@@ -175,7 +175,7 @@ impl Dag {
         from_task: &str,
         to_task: &str,
     ) -> DagResult<()> {
-        let from_idx = self.node_map.get(from_task)
+        let from_idx = self.node_map.get(from_task);
         let to_idx = self.node_map.get(to_task);
         
         match (from_idx, to_idx) {

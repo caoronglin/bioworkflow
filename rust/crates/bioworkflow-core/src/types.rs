@@ -268,6 +268,23 @@ pub struct Task {
     pub retries: u32,
 }
 
+impl Task {
+    pub fn new(id: impl Into<String>, name: impl Into<String>) -> Self {
+        Self {
+            id: id.into(),
+            name: name.into(),
+            description: String::new(),
+            inputs: Vec::new(),
+            outputs: Vec::new(),
+            command: String::new(),
+            resources: ResourceRequirements::default(),
+            dependencies: Vec::new(),
+            priority: 0,
+            retries: 3,
+        }
+    }
+}
+
 /// 资源需求
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct ResourceRequirements {
@@ -319,10 +336,10 @@ pub struct TaskExecutionResult {
     pub task_id: TaskId,
     /// 最终状态
     pub state: TaskState,
-    /// 开始时间
-    pub started_at: Option<datetime>,
-    /// 结束时间
-    pub completed_at: Option<datetime>,
+    /// 开始时间 (ISO 8601 format)
+    pub started_at: Option<String>,
+    /// 结束时间 (ISO 8601 format)
+    pub completed_at: Option<String>,
     /// 退出码
     pub exit_code: Option<i32>,
     /// 标准输出
@@ -346,6 +363,24 @@ pub struct ResourceUsage {
     pub disk_read_mb: usize,
     /// 磁盘写入（MB）
     pub disk_write_mb: usize,
+}
+
+/// 执行标识符
+pub type ExecutionId = String;
+
+/// 执行状态
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum ExecutionStatus {
+    /// 待执行
+    Pending,
+    /// 运行中
+    Running,
+    /// 已完成
+    Completed,
+    /// 已失败
+    Failed,
+    /// 已取消
+    Cancelled,
 }
 
 // Re-exports for convenience

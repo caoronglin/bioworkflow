@@ -18,24 +18,13 @@ async def test_health_check(client: AsyncClient):
 
 
 @pytest.mark.asyncio
-async def test_api_routes_info(client: AsyncClient):
-    """测试路由信息端点"""
-    response = await client.get("/api/")
-    assert response.status_code == 200
-    data = response.json()
-    assert "routes" in data
-    assert len(data["routes"]) > 0
-
-
-@pytest.mark.asyncio
-async def test_health_status_detailed(client: AsyncClient):
-    """测试详细健康检查端点"""
+async def test_api_health_status(client: AsyncClient):
+    """测试 API 健康状态端点"""
     response = await client.get("/api/health/status")
     assert response.status_code == 200
     data = response.json()
-    assert data["status"] in ["healthy", "degraded"]
-    assert "checks" in data
-    assert "api" in data["checks"]
+    assert data["status"] == "healthy"
+    assert "message" in data
 
 
 @pytest.mark.asyncio
@@ -46,3 +35,13 @@ async def test_ready_check(client: AsyncClient):
     data = response.json()
     assert data["status"] in ["ready", "not_ready"]
     assert "checks" in data
+
+
+@pytest.mark.asyncio
+async def test_api_docs_available(client: AsyncClient):
+    """测试 API 文档可用性"""
+    response = await client.get("/openapi.json")
+    assert response.status_code == 200
+    data = response.json()
+    assert "openapi" in data
+    assert "paths" in data

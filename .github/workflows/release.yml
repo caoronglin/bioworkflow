@@ -7,39 +7,205 @@ on:
 
 permissions:
   contents: write
+  id-token: write  # Required for PyPI trusted publishing
+
+env:
+  CARGO_TERM_COLOR: always
 
 jobs:
-  release:
+  # ==================== 构建 Linux Wheels ====================
+  build-linux:
+    name: Build Linux wheels
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ['3.12', '3.13']
+        target: [x86_64, aarch64]
+
     steps:
-    - uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-    - name: Set up Python
-      uses: actions/setup-python@v5
-      with:
-        python-version: '3.13'
+      - name: Build wheels
+        uses: PyO3/maturin-action@v1
+        with:
+          command: build
+          args: --release --out dist --interpreter python${{ matrix.python-version }}
+          target: ${{ matrix.target }}
+          manylinux: auto
+          working-directory: rust
+          sccache: 'true'
 
-    - name: Extract version
-      id: get_version
-      run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
+      - name: Upload wheels
+        uses: actions/upload-artifact@v4
+        with:
+          name: wheels-linux-${{ matrix.target }}-py${{ matrix.python-version }}
+          path: rust/dist/
+          retention-days: 30
 
-    - name: Create Release
-      uses: softprops/action-gh-release@v1
-      with:
-        name: BioWorkflow v${{ steps.get_version.outputs.VERSION }}
-        body: |
-          ## BioWorkflow v${{ steps.get_version.outputs.VERSION }}
+  # ==================== 构建 macOS Wheels ====================
+  build-macos:
+    name: Build macOS wheels
+    runs-on: macos-latest
+    strategy:
+      matrix:
+        python-version: ['3.12', '3.13']
 
-          ### 更新内容
-          - 查看 [CHANGELOG.md](./CHANGELOG.md) 了解详细更新
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-          ### 安装
-          ```bash
-          pip install bioworkflow==${{ steps.get_version.outputs.VERSION }}
-          ```
+      - name: Build wheels
+        uses: PyO3/maturin-action@v1
+        with:
+          command: build
+          args: --release --out dist --interpreter python${{ matrix.python-version }}
+          working-directory: rust
+          sccache: 'true'
 
-          ### 文档
-          - [快速开始](https://github.com/${{ github.repository }}/blob/main/QUICKSTART.md)
-          - [开发指南](https://github.com/${{ github.repository }}/blob/main/docs/DEVELOPMENT.md)
-        draft: false
-        prerelease: ${{ contains(steps.get_version.outputs.VERSION, 'alpha') || contains(steps.get_version.outputs.VERSION, 'beta') || contains(steps.get_version.outputs.VERSION, 'rc') }}
+      - name: Upload wheels
+        uses: actions/upload-artifact@v4
+        with:
+          name: wheels-macos-py${{ matrix.python-version }}
+          path: rust/dist/
+          retention-days: 30
+
+  # ==================== 构建 Windows Wheels ====================
+  build-windows:
+    name: Build Windows wheels
+    runs-on: windows-latest
+    strategy:
+      matrix:
+        python-version: ['3.12', '3.13']
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Build wheels
+        uses: PyO3/maturin-action@v1
+        with:
+          command: build
+          args: --release --out dist --interpreter python${{ matrix.python-version }}
+          working-directory: rust
+          sccache: 'true'
+
+      - name: Upload wheels
+        uses: actions/upload-artifact@v4
+        with:
+          name: wheels-windows-py${{ matrix.python-version }}
+          path: rust/dist/
+          retention-days: 30
+
+  # ==================== 构建 Source Distribution ====================
+  build-sdist:
+    name: Build source distribution
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Build sdist
+        run: pip install build && python -m build --sdist
+        working-directory: .
+
+      - name: Upload sdist
+        uses: actions/upload-artifact@v4
+        with:
+          name: sdist
+          path: dist/
+          retention-days: 30
+
+  # ==================== 发布到 PyPI ====================
+  publish-pypi:
+    name: Publish to PyPI
+    runs-on: ubuntu-latest
+    needs: [build-linux, build-macos, build-windows, build-sdist]
+    if: startsWith(github.ref, 'refs/tags/v') && !contains(github.ref, 'alpha') && !contains(github.ref, 'beta')
+    environment:
+      name: pypi
+      url: https://pypi.org/project/bioworkflow/
+
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: dist/
+          merge-multiple: true
+
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+
+  # ==================== 发布到 TestPyPI (预发布版本) ====================
+  publish-testpypi:
+    name: Publish to TestPyPI
+    runs-on: ubuntu-latest
+    needs: [build-linux, build-macos, build-windows, build-sdist]
+    if: startsWith(github.ref, 'refs/tags/v') && (contains(github.ref, 'alpha') || contains(github.ref, 'beta') || contains(github.ref, 'rc'))
+    environment:
+      name: testpypi
+      url: https://test.pypi.org/project/bioworkflow/
+
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: dist/
+          merge-multiple: true
+
+      - name: Publish to TestPyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          repository-url: https://test.pypi.org/legacy/
+
+  # ==================== 创建 GitHub Release ====================
+  create-release:
+    name: Create GitHub Release
+    runs-on: ubuntu-latest
+    needs: [build-linux, build-macos, build-windows, build-sdist]
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Extract version
+        id: get_version
+        run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: dist/
+          merge-multiple: true
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          name: BioWorkflow v${{ steps.get_version.outputs.VERSION }}
+          body: |
+            ## BioWorkflow v${{ steps.get_version.outputs.VERSION }}
+
+            ### 更新内容
+            - 查看 [CHANGELOG.md](./CHANGELOG.md) 了解详细更新
+
+            ### 安装
+            ```bash
+            pip install bioworkflow==${{ steps.get_version.outputs.VERSION }}
+            ```
+
+            ### 文档
+            - [快速开始](https://github.com/${{ github.repository }}/blob/main/QUICKSTART.md)
+            - [开发指南](https://github.com/${{ github.repository }}/blob/main/docs/DEVELOPMENT.md)
+
+            ### 下载
+            - 从下方的 Assets 中下载对应平台的 wheel 文件
+          draft: false
+          prerelease: ${{ contains(steps.get_version.outputs.VERSION, 'alpha') || contains(steps.get_version.outputs.VERSION, 'beta') || contains(steps.get_version.outputs.VERSION, 'rc') }}
+          files: dist/*

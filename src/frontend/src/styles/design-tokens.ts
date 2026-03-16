@@ -461,9 +461,12 @@ export function getGradient(name: GradientName): string {
  * getThemeColor('success', 'light') // 返回 'var(--color-success-light)'
  */
 export function getThemeColor(
-  color: ThemeColor,
+  color: ThemeColor | 'primary',
   shade?: 'light' | 'lighter' | 'dark'
 ): string {
+  if (color === 'primary') {
+    return tokens.colors.primary.base
+  }
   if (shade) {
     return tokens.colors.semantic[color][shade]
   }
@@ -565,20 +568,7 @@ export function onThemeChange(callback: (isDark: boolean) => void): () => void {
 }
 
 // ============================================================================
-// 导出所有类型和工具函数
+// 导出所有工具函数
 // ============================================================================
-
-export type {
-  ThemeColor,
-  NeutralColor,
-  SpacingSize,
-  FontSize,
-  FontWeight,
-  RadiusSize,
-  ShadowSize,
-  DurationSize,
-  Breakpoint,
-  GradientName,
-}
 
 export default tokens

@@ -36,8 +36,6 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
-
 /**
  * BaseEmpty 空状态组件
  * 
@@ -58,7 +56,7 @@ interface Props {
   iconSize?: number
 }
 
-const props = withDefaults(defineProps<Props>(), {
+withDefaults(defineProps<Props>(), {
   description: '暂无数据',
   size: 'medium',
   iconSize: 64,

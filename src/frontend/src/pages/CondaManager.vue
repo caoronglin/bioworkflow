@@ -34,7 +34,7 @@
             <el-table-column prop="name" label="环境名称" show-overflow-tooltip />
             <el-table-column label="操作" width="80">
               <template #default="{ row }">
-                <el-dropdown trigger="click" @command="(cmd) => handleEnvCommand(cmd, row)">
+                <el-dropdown trigger="click" @command="(cmd: string) => handleEnvCommand(cmd, row)">
                   <el-button link type="primary" size="small">
                     <el-icon><More /></el-icon>
                   </el-button>
@@ -78,19 +78,35 @@
             </div>
           </template>
 
-          <el-table :data="filteredPackages" style="width: 100%" v-loading="loadingPackages">
-            <el-table-column prop="name" label="包名" sortable />
-            <el-table-column prop="version" label="版本" width="120" />
-            <el-table-column prop="channel" label="渠道" width="120" />
-            <el-table-column prop="build" label="构建" width="150" />
-            <el-table-column label="操作" width="100">
-              <template #default="{ row }">
-                <el-button link type="danger" size="small" @click="uninstallPackage(row.name)">
-                  卸载
-                </el-button>
-              </template>
-            </el-table-column>
-          </el-table>
+          <div style="height: 400px; overflow-y: auto" ref="packageListRef">
+            <div :style="{ height: `${packageVirtualizer.getTotalSize()}px`, position: 'relative' }">
+              <div
+                v-for="virtualRow in packageVirtualizer.getVirtualItems()"
+                :key="String(virtualRow.key)"
+                :style="{
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  width: '100%',
+                  transform: `translateY(${virtualRow.start}px)`,
+                }"
+              >
+                <el-table :data="[filteredPackages[virtualRow.index]]" style="width: 100%">
+                  <el-table-column prop="name" label="包名" sortable />
+                  <el-table-column prop="version" label="版本" width="120" />
+                  <el-table-column prop="channel" label="渠道" width="120" />
+                  <el-table-column prop="build" label="构建" width="150" />
+                  <el-table-column label="操作" width="100">
+                    <template #default="{ row }">
+                      <el-button link type="danger" size="small" @click="uninstallPackage(row.name)">
+                        卸载
+                      </el-button>
+                    </template>
+                  </el-table-column>
+                </el-table>
+              </div>
+            </div>
+          </div>
 
           <el-empty v-if="packages.length === 0 && !loadingPackages" description="该环境暂无安装包" />
         </el-card>
@@ -161,8 +177,9 @@
 import { ref, computed, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import {
-  Plus, Search, More, Upload, UploadFilled,
+  Plus, Search, More,
 } from '@element-plus/icons-vue'
+import { useVirtualizer } from '@tanstack/vue-virtual'
 import { condaAPI } from '@/api'
 
 // 环境列表
@@ -210,12 +227,21 @@ const filteredPackages = computed(() => {
   )
 })
 
+// 包列表虚拟滚动
+const packageListRef = ref<HTMLElement | null>(null)
+const packageVirtualizer = useVirtualizer({
+  count: filteredPackages.value.length,
+  getScrollElement: () => packageListRef.value,
+  estimateSize: () => 50,
+  overscan: 10,
+})
+
 // 加载环境列表
 const loadEnvironments = async () => {
   loadingEnvs.value = true
   try {
     const res = await condaAPI.listEnvironments()
-    environments.value = res || []
+    environments.value = (res as any) || []
   } catch (error) {
     ElMessage.error('加载 Conda 环境失败')
   } finally {
@@ -234,7 +260,7 @@ const loadPackages = async (envName: string) => {
   loadingPackages.value = true
   try {
     const res = await condaAPI.listPackages(envName)
-    packages.value = res || []
+    packages.value = (res as any) || []
   } catch (error) {
     ElMessage.error('加载包列表失败')
   } finally {
@@ -328,8 +354,11 @@ const handleEnvCommand = async (command: string, env: any) => {
       try {
         await ElMessageBox.confirm(
           `确定要删除环境 ${env.name} 吗？此操作不可恢复。`,
-          '确认删除',
-          { confirmButtonText: '删除', cancelButtonText: '取消', type: 'danger' }
+          {
+            confirmButtonText: '删除',
+            cancelButtonText: '取消',
+            type: 'warning',
+          }
         )
         await condaAPI.deleteEnvironment(env.name)
         ElMessage.success('环境已删除')

@@ -60,6 +60,18 @@ const routes = [
 const router = createRouter({
   history: createWebHistory(),
   routes,
+  scrollBehavior(to, _from, savedPosition) {
+    if (savedPosition) {
+      return savedPosition
+    }
+    if (to.hash) {
+      return {
+        el: to.hash,
+        behavior: 'smooth',
+      }
+    }
+    return { top: 0, behavior: 'smooth' }
+  },
 })
 
 // 导航守卫 - 未登录时重定向到登录页
@@ -70,6 +82,12 @@ router.beforeEach((to, _from, next) => {
   } else {
     next()
   }
+})
+
+// 路由加载完成后的回调
+router.afterEach((to) => {
+  // 设置页面标题
+  document.title = `BioWorkflow - ${to.meta?.title || '首页'}`
 })
 
 export default router

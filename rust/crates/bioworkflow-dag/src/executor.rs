@@ -306,8 +306,8 @@ impl DagExecutor {
             let permit = semaphore.clone().acquire_owned().await.unwrap();
             self.execute_task_in_background(
                 task,
-                executor,
-                stats,
+                self.context.executor.clone(),
+                self.stats.clone(),
                 completed_tasks.clone(),
                 active_tasks.clone(),
                 tx.clone(),

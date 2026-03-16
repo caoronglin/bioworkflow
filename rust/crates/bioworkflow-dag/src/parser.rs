@@ -176,12 +176,12 @@ impl SnakemakeParser {
 
             // Look for tasks that produce inputs to this task
             for input in &task.inputs {
-                for (name, other_task) in task_map {
+                for (_name, other_task) in task_map {
                     if other_task.outputs.iter().any(|out| {
                         out.to_string_lossy().contains(input.to_string_lossy().as_ref())
                     }) {
                         if other_task.id != task.id {
-                            dependencies.push(other_task.id);
+                            dependencies.push(other_task.id.clone());
                         }
                     }
                 }

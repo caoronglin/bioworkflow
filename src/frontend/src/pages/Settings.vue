@@ -163,7 +163,7 @@
 <script setup lang="ts">
 import { ref, reactive } from 'vue'
 import { ElMessage } from 'element-plus'
-import { Plus, ArrowRight, Refresh, InfoFilled } from '@element-plus/icons-vue'
+import { Plus, Folder } from '@element-plus/icons-vue'
 
 const activeTab = ref('system')
 

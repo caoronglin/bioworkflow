@@ -84,7 +84,7 @@ const loadPipelines = async () => {
   loading.value = true
   try {
     const res = await pipelinesAPI.list()
-    pipelines.value = res || []
+    pipelines.value = (res as any) || []
   } catch (error) {
     ElMessage.error('加载流水线失败')
   } finally {
