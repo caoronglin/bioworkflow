@@ -59,7 +59,7 @@ RUN pip install --no-cache-dir -e .
 # ============================================
 # STAGE 3: Frontend Builder - Build Vue app
 # ============================================
-FROM node:22-alpine AS frontend-builder
+FROM node:25-alpine AS frontend-builder
 
 WORKDIR /build
 
