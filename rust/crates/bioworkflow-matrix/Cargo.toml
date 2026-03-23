@@ -14,7 +14,7 @@ bioworkflow-core = { path = "../bioworkflow-core" }
 # 矩阵运算
 ndarray = "0.16"
 ndarray-linalg = "0.17"
-nalgebra = "0.33"
+nalgebra = "0.34"
 
 # 并行计算
 rayon = "1.8"
