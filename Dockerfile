@@ -32,7 +32,7 @@ RUN touch src/main.rs && cargo build --release
 # ============================================
 # STAGE 2: Python Builder - Install dependencies
 # ============================================
-FROM python:3.12-slim AS python-builder
+FROM python:3.14-slim AS python-builder
 
 WORKDIR /build
 
@@ -77,7 +77,7 @@ RUN pnpm build
 # ============================================
 # STAGE 4: Runtime - Minimal production image
 # ============================================
-FROM python:3.12-slim AS runtime
+FROM python:3.14-slim AS runtime
 
 WORKDIR /app
 
