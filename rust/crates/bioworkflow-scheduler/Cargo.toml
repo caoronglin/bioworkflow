@@ -23,7 +23,7 @@ dashmap = "5.5"
 petgraph = "0.6"
 hashbrown = "0.14"
 indexmap = "2.2"
-priority-queue = "1.3"
+priority-queue = "2.7"
 
 # 时间与定时
 chrono = { version = "0.4", features = ["serde"] }
