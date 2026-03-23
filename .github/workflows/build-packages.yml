@@ -82,20 +82,15 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
       
-      - name: Set up pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: 10
-      
       - name: Install dependencies
         run: |
           cd src/frontend/
-          pnpm install --frozen-lockfile
+          npm ci
       
       - name: Build frontend
         run: |
           cd src/frontend/
-          pnpm build
+          npm run build
       
       - name: Upload frontend artifacts
         uses: actions/upload-artifact@v4
