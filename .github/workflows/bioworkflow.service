@@ -1,0 +1,38 @@
+[Unit]
+Description=BioWorkflow - Bioinformatics Workflow Platform
+Documentation=https://github.com/bioworkflow-platform/bioworkflow
+After=network.target
+
+[Service]
+Type=notify
+User=bioworkflow
+Group=bioworkflow
+WorkingDirectory=/usr/lib/bioworkflow
+
+# 环境变量
+Environment="PYTHONUNBUFFERED=1"
+Environment="PATH=/usr/bin:/usr/local/bin"
+EnvironmentFile=-/etc/bioworkflow/env
+
+# 主程序
+ExecStart=/usr/bin/bioworkflow --config /etc/bioworkflow/config.yaml
+ExecReload=/bin/kill -HUP $MAINPID
+
+# 重启策略
+Restart=on-failure
+RestartSec=5
+TimeoutStopSec=30
+
+# 安全加固
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/bioworkflow /var/log/bioworkflow
+PrivateTmp=true
+
+# 资源限制
+LimitNOFILE=65536
+LimitNPROC=4096
+
+[Install]
+WantedBy=multi-user.target

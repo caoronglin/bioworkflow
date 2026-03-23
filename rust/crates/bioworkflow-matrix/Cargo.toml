@@ -1,0 +1,50 @@
+[package]
+name = "bioworkflow-matrix"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "High-performance matrix operations for bioinformatics (correlation, distance, clustering)"
+
+[dependencies]
+# 核心依赖
+bioworkflow-core = { path = "../bioworkflow-core" }
+
+# 矩阵运算
+ndarray = "0.16"
+ndarray-linalg = "0.17"
+nalgebra = "0.33"
+
+# 并行计算
+rayon = "1.8"
+num_cpus = "1.16"
+
+# 序列化
+serde = { workspace = true }
+serde_json = { workspace = true }
+
+# 错误处理
+thiserror = { workspace = true }
+anyhow = { workspace = true }
+
+# Python 绑定
+pyo3 = { workspace = true, optional = true }
+numpy = { workspace = true, optional = true }
+
+# 日志
+tracing = { workspace = true }
+
+# 测试
+[dev-dependencies]
+criterion = "0.5"
+rand = "0.8"
+
+[[bench]]
+name = "matrix_benchmark"
+harness = false
+
+[features]
+default = ["python"]
+python = ["pyo3", "numpy"]
+parallel = ["ndarray/rayon"]

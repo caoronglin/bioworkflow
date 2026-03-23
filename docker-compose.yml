@@ -1,107 +1,150 @@
-version: '3.8'
+# Docker Compose for Local Development
+# Reference: https://docs.docker.com/compose/compose-file/
 
 services:
-  app:
+  # ============================================
+  # Backend API Service
+  # ============================================
+  api:
     build:
       context: .
       dockerfile: Dockerfile
-      target: production
-    image: ghcr.io/${GITHUB_REPOSITORY:-yourusername/bioworkflow}:${TAG:-latest}
-    container_name: bioworkflow
-    restart: unless-stopped
+      target: development
     ports:
-      - "${PORT:-8000}:8000"
+      - "8000:8000"
     environment:
-      - DEBUG=${DEBUG:-false}
-      - DATABASE_URL=${DATABASE_URL:-sqlite:///app/data/bioworkflow.db}
-      - REDIS_URL=${REDIS_URL:-redis://redis:6379/0}
-      - SECRET_KEY=${SECRET_KEY}
-      - SNAKEMAKE_WORKDIR=/app/workflows
-      - SNAKEMAKE_CONDA_PREFIX=/app/conda_envs
-      - CONDA_CHANNELS=conda-forge,bioconda,defaults
-      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+      - DATABASE_URL=postgresql://user:password@db:5432/app
+      - REDIS_URL=redis://redis:6379/0
+      - RUST_LOG=debug
     volumes:
-      - ./data:/app/data
-      - ./workflows:/app/workflows
-      - ./conda_envs:/app/conda_envs
-      - ./knowledge_base:/app/knowledge_base
-      - ./logs:/app/logs
+      - ./src/backend:/app/src/backend:ro
+      - ./rust:/app/rust:ro
     depends_on:
-      - redis
-      - elasticsearch
-    networks:
-      - bioworkflow-network
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
     healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
       interval: 30s
       timeout: 10s
       retries: 3
-      start_period: 40s
-
-  redis:
-    image: redis:7-alpine
-    container_name: bioworkflow-redis
-    restart: unless-stopped
-    volumes:
-      - redis-data:/data
     networks:
-      - bioworkflow-network
+      - backend
+      - frontend
+
+  # ============================================
+  # Frontend Development Server
+  # ============================================
+  frontend:
+    build:
+      context: ./src/frontend
+      dockerfile: Dockerfile.dev
+    ports:
+      - "5173:5173"
+    environment:
+      - VITE_API_URL=http://api:8000
+    volumes:
+      - ./src/frontend:/app:delegated
+      - /app/node_modules
+    depends_on:
+      - api
+    networks:
+      - frontend
+
+  # ============================================
+  # PostgreSQL Database
+  # ============================================
+  db:
+    image: postgres:16-alpine
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_USER=user
+      - POSTGRES_PASSWORD=password
+      - POSTGRES_DB=app
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: ["CMD-SHELL", "pg_isready -U user -d app"]
       interval: 10s
       timeout: 5s
       retries: 5
-
-  elasticsearch:
-    image: docker.elastic.co/elasticsearch/elasticsearch:8.11.0
-    container_name: bioworkflow-es
-    restart: unless-stopped
-    environment:
-      - discovery.type=single-node
-      - xpack.security.enabled=false
-      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
-    volumes:
-      - es-data:/usr/share/elasticsearch/data
     networks:
-      - bioworkflow-network
-    healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:9200/_cluster/health || exit 1"]
-      interval: 30s
-      timeout: 10s
-      retries: 5
+      - backend
 
-  # Celery Worker (可选，用于后台任务处理)
-  celery-worker:
-    build:
-      context: .
-      dockerfile: Dockerfile
-      target: production
-    image: ghcr.io/${GITHUB_REPOSITORY:-yourusername/bioworkflow}:${TAG:-latest}
-    container_name: bioworkflow-celery
-    restart: unless-stopped
-    command: celery -A backend.tasks worker -l info
-    environment:
-      - DEBUG=false
-      - DATABASE_URL=${DATABASE_URL:-sqlite:///app/data/bioworkflow.db}
-      - REDIS_URL=redis://redis:6379/0
-      - SECRET_KEY=${SECRET_KEY}
+  # ============================================
+  # Redis Cache
+  # ============================================
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
     volumes:
-      - ./data:/app/data
-      - ./workflows:/app/workflows
-      - ./conda_envs:/app/conda_envs
-      - ./logs:/app/logs
+      - redis_data:/data
+    command: redis-server --appendonly yes
+    networks:
+      - backend
+
+  # ============================================
+  # MinIO (S3-compatible storage)
+  # ============================================
+  minio:
+    image: minio/minio:latest
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    environment:
+      - MINIO_ROOT_USER=minioadmin
+      - MINIO_ROOT_PASSWORD=minioadmin
+    volumes:
+      - minio_data:/data
+    command: server /data --console-address ":9001"
+    networks:
+      - backend
+
+  # ============================================
+  # Monitoring - Prometheus
+  # ============================================
+  prometheus:
+    image: prom/prometheus:latest
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+    networks:
+      - backend
+
+  # ============================================
+  # Monitoring - Grafana
+  # ============================================
+  grafana:
+    image: grafana/grafana:latest
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    volumes:
+      - grafana_data:/var/lib/grafana
     depends_on:
-      - redis
-      - app
+      - prometheus
     networks:
-      - bioworkflow-network
-    profiles:
-      - celery
-
-volumes:
-  redis-data:
-  es-data:
+      - backend
 
 networks:
-  bioworkflow-network:
+  backend:
     driver: bridge
+  frontend:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  redis_data:
+  minio_data:
+  prometheus_data:
+  grafana_data:

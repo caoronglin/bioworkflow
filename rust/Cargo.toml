@@ -5,6 +5,7 @@ members = [
     "crates/bioworkflow-io",
     "crates/bioworkflow-scheduler",
     "crates/bioworkflow-python",
+    "crates/bioworkflow-matrix",  # 新增：矩阵运算库
 ]
 resolver = "2"
 

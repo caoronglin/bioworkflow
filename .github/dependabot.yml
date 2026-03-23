@@ -1,0 +1,117 @@
+# Dependabot Configuration - Automated dependency updates
+# Reference: https://docs.github.com/en/code-security/dependabot/dependabot-version-updates
+
+version: 2
+
+updates:
+  # ============================================
+  # Python Dependencies
+  # ============================================
+  - package-ecosystem: "pip"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "chore(deps)"
+      include: "scope"
+    reviewers:
+      - "your-team/python-reviewers"
+    labels:
+      - "dependencies"
+      - "python"
+    groups:
+      production-dependencies:
+        dependency-type: "production"
+      development-dependencies:
+        dependency-type: "development"
+        update-types:
+          - "minor"
+          - "patch"
+
+  # ============================================
+  # Rust Dependencies
+  # ============================================
+  - package-ecosystem: "cargo"
+    directory: "/rust"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "chore(deps)"
+      include: "scope"
+    reviewers:
+      - "your-team/rust-reviewers"
+    labels:
+      - "dependencies"
+      - "rust"
+
+  # ============================================
+  # Frontend Dependencies (pnpm)
+  # ============================================
+  - package-ecosystem: "npm"
+    directory: "/src/frontend"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "chore(deps)"
+      include: "scope"
+    reviewers:
+      - "your-team/frontend-reviewers"
+    labels:
+      - "dependencies"
+      - "frontend"
+    groups:
+      vue-ecosystem:
+        patterns:
+          - "vue"
+          - "vue-router"
+          - "pinia"
+          - "@vueuse/*"
+      vite-plugins:
+        patterns:
+          - "@vitejs/*"
+          - "vite-plugin-*"
+      typescript:
+        patterns:
+          - "typescript"
+          - "@types/*"
+
+  # ============================================
+  # GitHub Actions
+  # ============================================
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+    open-pull-requests-limit: 3
+    commit-message:
+      prefix: "ci(deps)"
+    labels:
+      - "dependencies"
+      - "github-actions"
+
+  # ============================================
+  # Docker Base Images
+  # ============================================
+  - package-ecosystem: "docker"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+    open-pull-requests-limit: 3
+    commit-message:
+      prefix: "docker(deps)"
+    labels:
+      - "dependencies"
+      - "docker"
