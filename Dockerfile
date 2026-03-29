@@ -8,7 +8,7 @@
 # ============================================
 # STAGE 1: Rust Builder - Build native module
 # ============================================
-FROM rust:1.85-slim AS rust-builder
+FROM rust:1.94-slim AS rust-builder
 
 WORKDIR /build
 
