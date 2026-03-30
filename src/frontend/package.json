@@ -20,7 +20,7 @@
     "@vue-flow/controls": "^1.1.2",
     "@vue-flow/core": "^1.42.1",
     "@vue-flow/minimap": "^1.5.2",
-    "@vueuse/core": "^12.5.0",
+    "@vueuse/core": "^14.2.1",
     "axios": "^1.7.9",
     "dayjs": "^1.11.13",
     "dompurify": "^3.3.1",
@@ -31,11 +31,11 @@
     "marked": "^15.0.6",
     "monaco-editor": "^0.52.2",
     "nprogress": "^0.2.0",
-    "pinia": "^2.3.1",
+    "pinia": "^3.0.4",
     "splitpanes": "^3.1.8",
-    "vue": "^3.5.13",
+    "vue": "^3.5.31",
     "vue-echarts": "^7.0.3",
-    "vue-router": "^4.5.0",
+    "vue-router": "^5.0.4",
     "vue3-perfect-scrollbar": "^2.0.0"
   },
   "devDependencies": {
